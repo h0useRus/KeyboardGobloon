@@ -1,5 +1,6 @@
 use kbg_settings::Action;
 
+use crate::detect::Detector;
 use crate::keys::{LayoutId, Stroke};
 
 /// Longest word kept; longer ones are not converted (nobody mistypes a whole line as one word).
@@ -69,6 +70,10 @@ pub struct Engine {
     /// The layout the word is shown in since we converted it; the system may not have
     /// switched the window yet when the hotkey comes again.
     shown_in: Option<LayoutId>,
+    /// The layout the word was typed in, when the detector converted it: the hotkey undoes that.
+    auto_from: Option<LayoutId>,
+    /// Converts words typed in the wrong layout as they end; `None` = auto-switching is off.
+    detector: Option<Detector>,
 }
 
 impl Engine {
@@ -79,12 +84,19 @@ impl Engine {
         }
     }
 
+    pub fn set_detector(&mut self, detector: Option<Detector>) {
+        self.detector = detector;
+    }
+
     pub fn handle(&mut self, input: Input, layouts: &dyn Layouts) -> Vec<Command> {
         match input {
             Input::Text(stroke) => self.text(stroke),
             Input::Space => {
                 if !self.word.is_empty() {
                     self.trailing += 1;
+                    if self.trailing == 1 {
+                        return self.word_ended(layouts);
+                    }
                 } else {
                     // The end of a word too long to keep.
                     self.overflow = false;
@@ -152,19 +164,45 @@ impl Engine {
         self.trailing = 0;
         self.overflow = false;
         self.shown_in = None;
+        self.auto_from = None;
+    }
+
+    /// The word just got its first space: retype it if the detector says it is in the wrong layout.
+    fn word_ended(&mut self, layouts: &dyn Layouts) -> Vec<Command> {
+        // A word we converted already, or one whose characters no longer match its keys.
+        if self.shown_in.is_some() || self.shown != self.word.len() {
+            return Vec::new();
+        }
+        let (Some(detector), Some(current)) = (&self.detector, layouts.current()) else {
+            return Vec::new();
+        };
+        let Some(target) = detector.detect(&self.word, current, layouts) else {
+            return Vec::new();
+        };
+        let commands = self.convert_to(target, layouts);
+        if !commands.is_empty() {
+            self.auto_from = Some(current);
+        }
+        commands
     }
 
     fn convert(&mut self, layouts: &dyn Layouts) -> Vec<Command> {
         if self.word.is_empty() {
             return Vec::new();
         }
-        let Some(target) = self
-            .shown_in
-            .or_else(|| layouts.current())
-            .and_then(|c| next_layout(layouts, c))
-        else {
-            return Vec::new();
-        };
+        // Undoing an automatic switch goes back to where the word came from.
+        let target = self.auto_from.take().or_else(|| {
+            self.shown_in
+                .or_else(|| layouts.current())
+                .and_then(|c| next_layout(layouts, c))
+        });
+        match target {
+            Some(target) => self.convert_to(target, layouts),
+            None => Vec::new(),
+        }
+    }
+
+    fn convert_to(&mut self, target: LayoutId, layouts: &dyn Layouts) -> Vec<Command> {
         let Some(word) = layouts.render(target, &self.word) else {
             return Vec::new();
         };
@@ -344,5 +382,87 @@ mod action_tests {
             e.handle(Input::Action(Action::ChangeCase), &fake),
             [Command::ChangeCase]
         );
+    }
+}
+
+#[cfg(test)]
+mod detector_tests {
+    use super::*;
+    use crate::detect::tests::detector;
+    use crate::fake::{EN, Fake, RU, strokes};
+
+    fn typed(engine: &mut Engine, layouts: &Fake, text: &str) -> Vec<Command> {
+        let mut out = Vec::new();
+        for c in text.chars() {
+            let input = match c {
+                ' ' => Input::Space,
+                _ => Input::Text(strokes(layouts.current.get(), &c.to_string())[0]),
+            };
+            out = engine.handle(input, layouts);
+        }
+        out
+    }
+
+    fn engine() -> Engine {
+        let mut e = Engine::new();
+        e.set_detector(Some(detector()));
+        e
+    }
+
+    #[test]
+    fn converts_a_wrong_layout_word_at_its_space() {
+        let fake = Fake::new(EN);
+        let mut e = engine();
+        assert!(typed(&mut e, &fake, "ghbdtn").is_empty());
+        assert_eq!(
+            typed(&mut e, &fake, " "),
+            [
+                Command::Replace {
+                    erase: 7,
+                    text: "привет ".into()
+                },
+                Command::SwitchLayout(RU)
+            ]
+        );
+        // More spaces do not convert again.
+        assert!(typed(&mut e, &fake, " ").is_empty());
+    }
+
+    #[test]
+    fn the_hotkey_undoes_an_automatic_switch() {
+        let mut fake = Fake::new(EN);
+        // A third layout: undo must go back to EN, not on to the next one.
+        fake.installed = vec![EN, RU, crate::LayoutId(0x0407_0407)];
+        let mut e = engine();
+        typed(&mut e, &fake, "ghbdtn ");
+        assert_eq!(
+            e.handle(Input::Action(Action::ConvertLast), &fake),
+            [
+                Command::Replace {
+                    erase: 7,
+                    text: "ghbdtn ".into()
+                },
+                Command::SwitchLayout(EN)
+            ]
+        );
+    }
+
+    #[test]
+    fn right_words_and_switched_off_detection_stay() {
+        let fake = Fake::new(EN);
+        let mut e = engine();
+        assert!(typed(&mut e, &fake, "hello ").is_empty());
+        e.set_detector(None);
+        assert!(typed(&mut e, &fake, "ghbdtn ").is_empty());
+    }
+
+    #[test]
+    fn a_word_converted_by_hand_is_not_judged_again() {
+        let fake = Fake::new(RU);
+        let mut e = engine();
+        // руддщ is hello typed in RU; the hotkey made it hello, and the window still says RU.
+        typed(&mut e, &fake, "руддщ");
+        e.handle(Input::Action(Action::ConvertLast), &fake);
+        assert!(typed(&mut e, &fake, " ").is_empty());
     }
 }

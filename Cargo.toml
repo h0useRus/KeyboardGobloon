@@ -21,6 +21,9 @@ toml = "1"
 eframe = { version = "0.37", default-features = false, features = ["accesskit", "default_fonts", "glow", "links"] }
 egui = "0.37"
 kbg-settings = { path = "crates/kbg-settings" }
+kbg-pack-builder = { path = "crates/kbg-pack-builder" }
+# Language packs: word forms as a finite state transducer, read straight from the mapped file.
+fst = "0.4"
 gob-ui = { git = "https://github.com/h0useRus/gobloon-common-ui", tag = "v0.1.0" }
 
 [profile.release]

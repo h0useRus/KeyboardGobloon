@@ -3,7 +3,14 @@ name = "kbg-core"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "Typing engine: the last word as physical keys, layout conversion (no OS code)"
+description = "Typing engine: the last word as physical keys, layout conversion, language packs and wrong-layout detection (no OS code)"
 
 [dependencies]
+fst.workspace = true
 kbg-settings.workspace = true
+serde.workspace = true
+toml.workspace = true
+
+[dev-dependencies]
+# Tests build small packs the same way the real ones are built.
+kbg-pack-builder.workspace = true

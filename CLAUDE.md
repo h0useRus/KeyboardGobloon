@@ -12,7 +12,10 @@ Plans (local only, gitignored): plans/ROADMAP.md (milestones M0a-M6). Work on ON
   more `lang/*.ftl` load from `<exe>/lang/`.
 - crates/kbg-core      typing engine, no OS code: `Stroke` (physical key + Shift/Caps/AltGr), `Engine::handle(Input,
   &dyn Layouts) -> Vec<Command>`: last word as keys + trailing spaces, `ConvertLast` renders it in the next layout
-  (`Replace{erase,text}` + `SwitchLayout`). Unit-tested with a fake two-layout `Layouts`
+  (`Replace{erase,text}` + `SwitchLayout`). `Pack` reads a language pack from any bytes (the platform maps
+  the files); `Detector` scores the word's rendering in each packed layout (dictionary hit, letter-trigram bits per
+  letter); the engine asks it at the word's first space, and ConvertLast right after undoes it. Unit-tested with a
+  fake US/RU `Layouts` and small packs made by kbg-pack-builder (dev-dependency)
 - crates/kbg-platform  everything OS-specific behind one interface (lib.rs re-exports `windows/` or `none.rs`):
   hook.rs = WH_KEYBOARD_LL + WH_MOUSE_LL on thread `kbg-hook`, sorts keys into `Input` and `try_send`s them to a
   bounded channel (nothing slow in the hook); injected events ignored; Pause (no modifiers) is swallowed = ConvertLast.
