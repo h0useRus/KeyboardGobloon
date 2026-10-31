@@ -1,0 +1,114 @@
+/* Keyboard Gobloon's own additions to the shared styles.css: the typing demo in the hero and the
+   keycaps. Same tokens as styles.css. */
+
+/* The typing demo: a text field where the mistyped word turns into the meant one after Pause. */
+.demo {
+  max-width: 560px;
+  margin: var(--s-700) auto 0;
+  padding: var(--s-300);
+  border: 1px solid var(--line);
+  border-radius: var(--r-2xl);
+  background: var(--surface);
+  text-align: left;
+}
+.demo-field {
+  position: relative;
+  padding: var(--s-200) var(--s-200);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--bg);
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+}
+.demo-field .typed {
+  color: var(--text-muted);
+}
+.demo-word {
+  position: relative;
+  display: inline-grid;
+}
+.demo-word > span {
+  grid-area: 1 / 1;
+}
+.demo-word .wrong {
+  color: #e5484d;
+  text-decoration: underline wavy #e5484d 1px;
+  text-underline-offset: 4px;
+}
+.demo-word .right {
+  color: var(--accent);
+  opacity: 0;
+}
+.demo-field .caret {
+  display: inline-block;
+  width: 2px;
+  height: 1.3em;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  background: var(--text);
+}
+.demo-hint {
+  display: flex;
+  align-items: center;
+  gap: var(--s-75);
+  margin-top: var(--s-200);
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+/* A keycap, inline with text. */
+.key {
+  display: inline-block;
+  min-width: 2.2em;
+  padding: 0.1em 0.55em;
+  border: 1px solid var(--line);
+  border-bottom-width: 3px;
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  color: var(--text);
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+  text-align: center;
+}
+
+/* With motion: the word is wrong for a while, Pause is pressed, the word is right; on a loop. */
+.motion .demo-word .wrong {
+  animation: demo-wrong 6s var(--ease) infinite;
+}
+.motion .demo-word .right {
+  animation: demo-right 6s var(--ease) infinite;
+}
+.motion .demo-hint .key {
+  animation: demo-press 6s ease infinite;
+}
+.motion .demo-field .caret {
+  animation: demo-caret 1s steps(1) infinite;
+}
+@keyframes demo-wrong {
+  0%, 45% { opacity: 1; transform: none; }
+  52%, 92% { opacity: 0; transform: translateY(-6px); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes demo-right {
+  0%, 48% { opacity: 0; transform: translateY(6px); }
+  55%, 92% { opacity: 1; transform: none; }
+  100% { opacity: 0; }
+}
+@keyframes demo-press {
+  0%, 44% { transform: none; border-bottom-width: 3px; background: var(--surface-2); }
+  47% { transform: translateY(2px); border-bottom-width: 1px; background: var(--accent); color: var(--accent-ink); }
+  52%, 100% { transform: none; border-bottom-width: 3px; background: var(--surface-2); }
+}
+@keyframes demo-caret {
+  50% { opacity: 0; }
+}
+/* Without motion the demo shows the result. */
+:root:not(.motion) .demo-word .wrong {
+  opacity: 0;
+}
+:root:not(.motion) .demo-word .right {
+  opacity: 1;
+}

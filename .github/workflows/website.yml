@@ -1,0 +1,50 @@
+# The website (site/) is published to h0userus.github.io/keyboard-gobloon when a release reaches
+# main, so it describes the released version: the files are pushed to the h0useRus/keyboard-gobloon
+# repository, which serves them with GitHub Pages. The push uses a deploy key of that repository
+# (write access to it alone): its private half is the KEYBOARD_GOBLOON_DEPLOY_KEY secret here.
+# Without the secret the run fails, so a release never leaves the old site online unnoticed.
+# Same as Joystick Gobloon's website.yml.
+name: Website
+
+on:
+  push:
+    branches: [main]
+    paths: ["site/**", ".github/workflows/website.yml", ".github/scripts/publish-site.sh"]
+  workflow_dispatch:
+
+concurrency:
+  group: website
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # publish-site.sh dates the sitemap entries by the pages' last commits.
+          fetch-depth: 0
+      - name: Push to h0useRus/keyboard-gobloon
+        env:
+          DEPLOY_KEY: ${{ secrets.KEYBOARD_GOBLOON_DEPLOY_KEY }}
+        run: |
+          if [ -z "$DEPLOY_KEY" ]; then
+            echo "::error::The KEYBOARD_GOBLOON_DEPLOY_KEY secret is not set: the website was not published."
+            exit 1
+          fi
+          key="$RUNNER_TEMP/keyboard_gobloon_deploy"
+          printf '%s\n' "$DEPLOY_KEY" > "$key"
+          chmod 600 "$key"
+          export GIT_SSH_COMMAND="ssh -i $key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
+          git clone --depth 1 git@github.com:h0useRus/keyboard-gobloon.git out
+          bash .github/scripts/publish-site.sh out "${GITHUB_SHA::7}"
+          cd out
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes."
+            exit 0
+          fi
+          git commit -m "chore: publish website from ${GITHUB_SHA::7}"
+          git push

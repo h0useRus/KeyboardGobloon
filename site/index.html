@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="en" class="no-js">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Keyboard Gobloon: fix text typed in the wrong keyboard layout</title>
+  <meta name="description" content="Free, open source replacement for the Windows language switcher. Typed ghbdtn instead of привет? Press Pause and Keyboard Gobloon retypes the word in the right layout. Light, private, no account.">
+  <link rel="canonical" href="https://h0userus.github.io/keyboard-gobloon/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Keyboard Gobloon">
+  <meta property="og:title" content="Keyboard Gobloon: fix text typed in the wrong keyboard layout">
+  <meta property="og:description" content="Press one key and the last word is retyped in the right layout. A light, private replacement for the Windows language switcher. Free and open source.">
+  <meta property="og:url" content="https://h0userus.github.io/keyboard-gobloon/">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:image" content="https://h0userus.github.io/keyboard-gobloon/img/og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Keyboard Gobloon logo, a green goblin whose head is a keycap, next to ghbdtn turning into привет">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Keyboard Gobloon: fix text typed in the wrong keyboard layout">
+  <meta name="twitter:description" content="Press one key and the last word is retyped in the right layout. Free and open source.">
+  <meta name="twitter:image" content="https://h0userus.github.io/keyboard-gobloon/img/og.jpg">
+  <meta name="author" content="Denis Ibragimov">
+  <meta name="theme-color" content="#131209">
+  <link rel="icon" href="img/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="img/icon-256.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400&display=swap">
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="keyboard.css">
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://h0userus.github.io/keyboard-gobloon/#website",
+      "url": "https://h0userus.github.io/keyboard-gobloon/",
+      "name": "Keyboard Gobloon",
+      "inLanguage": "en"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://h0userus.github.io/keyboard-gobloon/#app",
+      "name": "Keyboard Gobloon",
+      "url": "https://h0userus.github.io/keyboard-gobloon/",
+      "description": "Free, open source replacement for the Windows language switcher that retypes text typed in the wrong keyboard layout.",
+      "applicationCategory": "UtilitiesApplication",
+      "applicationSubCategory": "Keyboard layout switcher",
+      "operatingSystem": "Windows 10, Windows 11",
+      "isAccessibleForFree": true,
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "license": "https://opensource.org/licenses/MIT",
+      "downloadUrl": "https://github.com/h0useRus/KeyboardGobloon/releases",
+      "codeRepository": "https://github.com/h0useRus/KeyboardGobloon",
+      "image": "https://h0userus.github.io/keyboard-gobloon/img/og.jpg",
+      "author": { "@type": "Person", "name": "Denis Ibragimov", "url": "https://github.com/h0useRus" }
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://h0userus.github.io/keyboard-gobloon/#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Is Keyboard Gobloon free?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Yes. It is open source under the MIT license. There is no account, no trial and nothing to buy." }
+        },
+        {
+          "@type": "Question",
+          "name": "Does it send or store what I type?",
+          "acceptedAnswer": { "@type": "Answer", "text": "No. It keeps only the last word in memory so it can retype it, writes nothing you type to disk and sends nothing anywhere." }
+        },
+        {
+          "@type": "Question",
+          "name": "Which languages does it support?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Converting the last word works between any keyboard layouts installed in Windows. Automatic switching and typo correction will start with English and Russian, with more languages as downloads." }
+        }
+      ]
+    }
+  ]
+}
+  </script>
+  <script>
+    document.documentElement.classList.remove("no-js");
+    if ("IntersectionObserver" in window && !matchMedia("(prefers-reduced-motion: reduce)").matches)
+      document.documentElement.classList.add("motion");
+  </script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <nav class="nav" aria-label="Main">
+    <a class="brand" href="index.html" aria-label="Keyboard Gobloon home">
+      <img src="img/icon.svg" alt="" width="24" height="24">
+      Keyboard Gobloon
+    </a>
+    <ul class="nav-links">
+      <li><a href="#features">Features</a></li>
+      <li><a href="#how">How it works</a></li>
+      <li><a href="#roadmap">Roadmap</a></li>
+      <li><a href="#faq">FAQ</a></li>
+    </ul>
+    <a class="btn btn-primary btn-sm nav-cta" href="https://github.com/h0useRus/KeyboardGobloon/releases">
+      <i class="ph-bold ph-download-simple" aria-hidden="true"></i> Download
+    </a>
+    <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="menu" aria-label="Open menu">
+      <span></span><span></span>
+    </button>
+  </nav>
+
+  <div class="menu" id="menu" aria-hidden="true">
+    <ul>
+      <li style="--i:0"><a href="#features">Features</a></li>
+      <li style="--i:1"><a href="#how">How it works</a></li>
+      <li style="--i:2"><a href="#roadmap">Roadmap</a></li>
+      <li style="--i:3"><a href="#faq">FAQ</a></li>
+      <li style="--i:4"><a class="btn btn-primary" href="https://github.com/h0useRus/KeyboardGobloon/releases"><i class="ph-bold ph-download-simple" aria-hidden="true"></i> Download for free</a></li>
+    </ul>
+  </div>
+
+  <main id="main">
+    <!-- Hero -->
+    <header class="hero" id="top">
+      <div class="wrap">
+        <div class="hero-logo"><img class="bob" src="img/icon.svg" width="160" height="160" alt="Keyboard Gobloon logo, a green goblin whose head is a keycap"></div>
+        <p class="eyebrow"><span class="dot" aria-hidden="true"></span> Free, open source language switcher for Windows</p>
+        <h1 class="gradient">Typed in the wrong layout?<br>One key fixes it</h1>
+        <p class="sub">Keyboard Gobloon retypes the last word in the layout you meant and switches the keyboard for you. A light, private replacement for the Windows language switcher.</p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" id="download" href="https://github.com/h0useRus/KeyboardGobloon/releases">
+            <i class="ph-bold ph-download-simple" aria-hidden="true"></i>
+            Download for free
+          </a>
+        </div>
+        <p class="hero-note">Windows 10 and 11. Installer without administrator rights, or a portable zip. MIT license, no account.</p>
+
+        <figure class="demo" aria-label="Example: ghbdtn becomes привет after pressing Pause">
+          <div class="demo-field">
+            <span class="typed">Hi! I just wanted to say</span>
+            <span class="demo-word"><span class="wrong">ghbdtn</span><span class="right">привет</span></span><span class="caret" aria-hidden="true"></span>
+          </div>
+          <figcaption class="demo-hint"><span class="key">Pause</span> retypes the last word in the next layout. Press it again to go back.</figcaption>
+        </figure>
+
+        <ul class="proof" aria-label="At a glance">
+          <li><strong>2 MB</strong><span>of memory in the tray</span></li>
+          <li><strong>0%</strong><span>CPU while you are not typing</span></li>
+          <li><strong>1 key</strong><span>to fix a word</span></li>
+          <li><strong>0 bytes</strong><span>of what you type sent anywhere</span></li>
+        </ul>
+      </div>
+    </header>
+
+    <!-- Problem to solution -->
+    <section aria-labelledby="problem-title">
+      <div class="wrap">
+        <div class="section-head reveal">
+          <p class="kicker">The problem</p>
+          <h2 id="problem-title">You look up and half a sentence is gibberish</h2>
+          <p>Everyone who types in two languages knows it: the layout was wrong, and the only fix is to delete, switch and type it all again.</p>
+        </div>
+
+        <div class="compare reveal">
+          <div class="card">
+            <h3>Before</h3>
+            <ul class="tool-list">
+              <li><i class="ph ph-backspace" aria-hidden="true"></i><div><b>Delete the word</b><span>one Backspace per letter</span></div></li>
+              <li><i class="ph ph-translate" aria-hidden="true"></i><div><b>Switch the layout</b><span>Alt+Shift or Win+Space, then check the tray</span></div></li>
+              <li><i class="ph ph-keyboard" aria-hidden="true"></i><div><b>Type it again</b><span>and hope you switched the right way</span></div></li>
+            </ul>
+          </div>
+          <div class="arrow" aria-hidden="true"><i class="ph ph-arrow-right"></i></div>
+          <div class="card solution">
+            <h3>With Keyboard Gobloon</h3>
+            <ul class="tool-list">
+              <li><i class="ph ph-hand-tap" aria-hidden="true"></i><div><b>Press Pause</b><span>the word is retyped in the next layout</span></div></li>
+              <li><i class="ph ph-swap" aria-hidden="true"></i><div><b>The layout switches too</b><span>keep typing, it is already right</span></div></li>
+              <li><i class="ph ph-arrow-counter-clockwise" aria-hidden="true"></i><div><b>Wrong guess?</b><span>press Pause again to go back</span></div></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tagline reveal -->
+    <section class="tagline" aria-label="In short">
+      <div class="wrap">
+        <p data-reveal-words>Type in any layout. Fix it with one key. Keep typing.</p>
+      </div>
+    </section>
+
+    <!-- Features -->
+    <section id="features" aria-labelledby="features-title">
+      <div class="wrap">
+        <div class="section-head reveal">
+          <p class="kicker">Features</p>
+          <h2 id="features-title">Small, fast and out of your way</h2>
+          <p>Written in Rust. It waits for keys and does nothing else, so it costs less than the Windows switcher it replaces.</p>
+        </div>
+        <ul class="actions reveal">
+          <li><i class="ph ph-arrows-left-right" aria-hidden="true"></i>Retype the last word in the next layout</li>
+          <li><i class="ph ph-arrow-counter-clockwise" aria-hidden="true"></i>Press again to go back</li>
+          <li><i class="ph ph-globe" aria-hidden="true"></i>Any layouts installed in Windows</li>
+          <li><i class="ph ph-text-aa" aria-hidden="true"></i>Keeps capitals and the spaces you typed</li>
+          <li><i class="ph ph-cursor-click" aria-hidden="true"></i>A click or Enter starts a new word</li>
+          <li><i class="ph ph-lock-simple" aria-hidden="true"></i>Never logs or sends what you type</li>
+          <li><i class="ph ph-power" aria-hidden="true"></i>Starts with Windows, lives in the tray</li>
+          <li><i class="ph ph-user" aria-hidden="true"></i>Installs without administrator rights</li>
+          <li><i class="ph ph-folder-simple-dashed" aria-hidden="true"></i>Portable zip, nothing to install</li>
+          <li><i class="ph ph-gauge" aria-hidden="true"></i>About 2 MB of memory, no CPU at rest</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- How it works -->
+    <section id="how" aria-labelledby="how-title">
+      <div class="wrap">
+        <div class="section-head reveal">
+          <p class="kicker">How it works</p>
+          <h2 id="how-title">Three steps, no settings</h2>
+        </div>
+        <ol class="steps reveal">
+          <li class="card">
+            <h3>Install</h3>
+            <p>Run the installer, no administrator rights needed, or unpack the portable zip anywhere. Keyboard Gobloon starts in the tray.</p>
+          </li>
+          <li class="card">
+            <h3>Type as usual</h3>
+            <p>It remembers only the word you are typing, as keys, so it can show that word in any layout.</p>
+          </li>
+          <li class="card">
+            <h3>Press Pause</h3>
+            <p>When a word comes out in the wrong layout, press <span class="key">Pause</span>. The word is retyped and the layout switched; press it again to go back.</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- Roadmap -->
+    <section id="roadmap" aria-labelledby="roadmap-title">
+      <div class="wrap">
+        <div class="section-head reveal">
+          <p class="kicker">Roadmap</p>
+          <h2 id="roadmap-title">What comes next</h2>
+          <p>Keyboard Gobloon is in early alpha. Here is where it is going, in this order.</p>
+        </div>
+        <div class="table-wrap reveal">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Feature</th>
+                <th scope="col">What it does</th>
+                <th scope="col">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><th scope="row">Fix the last word</th><td>Pause retypes it in the next layout</td><td>Available</td></tr>
+              <tr><th scope="row">The Windows switcher, replaced</th><td>Uses your Windows switch keys or your own; the tray shows the language as two letters or a flag, like Windows does</td><td>Next</td></tr>
+              <tr><th scope="row">Fix selected text</th><td>Retype a selection in the other layout, change its case</td><td>Next</td></tr>
+              <tr><th scope="row">Automatic switching</th><td>Notices the wrong layout while you type and switches by itself; English and Russian first</td><td>Planned</td></tr>
+              <tr><th scope="row">Typo correction</th><td>Fixes typos as you type; Backspace right after undoes it</td><td>Planned</td></tr>
+              <tr><th scope="row">Language packs</th><td>More languages as downloads from the settings</td><td>Planned</td></tr>
+              <tr><th scope="row">Prompt optimizer</th><td>A small local AI turns a rough prompt into a better one for Claude, ChatGPT or Gemini; runs on the CPU or, if you choose, the GPU</td><td>Planned</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section id="faq" aria-labelledby="faq-title">
+      <div class="wrap">
+        <div class="section-head center reveal">
+          <p class="kicker">FAQ</p>
+          <h2 id="faq-title">Questions before you try it</h2>
+        </div>
+        <div class="faq reveal">
+          <details>
+            <summary>Is Keyboard Gobloon free?<i class="ph-bold ph-plus" aria-hidden="true"></i></summary>
+            <div class="answer"><p>Yes. It is open source under the MIT license. There is no account, no trial and nothing to buy.</p></div>
+          </details>
+          <details>
+            <summary>Does it send or store what I type?<i class="ph-bold ph-plus" aria-hidden="true"></i></summary>
+            <div class="answer"><p>No. It keeps only the word you are typing in memory, so it can retype it, writes nothing you type to disk and sends nothing anywhere. The <a href="https://github.com/h0useRus/KeyboardGobloon">source code</a> is open to check.</p></div>
+          </details>
+          <details>
+            <summary>Which languages does it support?<i class="ph-bold ph-plus" aria-hidden="true"></i></summary>
+            <div class="answer"><p>Fixing the last word works between any keyboard layouts installed in Windows. Automatic switching and typo correction will start with English and Russian, with more languages as downloads.</p></div>
+          </details>
+          <details>
+            <summary>My keyboard has no Pause key. What now?<i class="ph-bold ph-plus" aria-hidden="true"></i></summary>
+            <div class="answer"><p>On many laptops it is Fn plus another key. Choosing your own key is the next thing on the roadmap.</p></div>
+          </details>
+          <details>
+            <summary>Why does it not work in some windows?<i class="ph-bold ph-plus" aria-hidden="true"></i></summary>
+            <div class="answer"><p>Windows does not let a normal program type into windows that run as administrator. An option to run Keyboard Gobloon as administrator is planned.</p></div>
+          </details>
+          <details>
+            <summary>Why does Windows SmartScreen warn on the first start?<i class="ph-bold ph-plus" aria-hidden="true"></i></summary>
+            <div class="answer"><p>Builds are not code-signed yet, and new releases need some downloads before SmartScreen trusts them. Choose More info, then Run anyway.</p></div>
+          </details>
+          <details>
+            <summary>Is it ready for daily use?<i class="ph-bold ph-plus" aria-hidden="true"></i></summary>
+            <div class="answer"><p>It is in early alpha: fixing the last word works, the rest is on the roadmap. Bugs reported on GitHub get fixed quickly.</p></div>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <!-- Support -->
+    <section class="support-section" aria-labelledby="support-title">
+      <div class="wrap">
+        <div class="support card reveal">
+          <div class="benefit-icon"><i class="ph ph-heart" aria-hidden="true"></i></div>
+          <div>
+            <h2 id="support-title">Free for everyone, kept going by donations</h2>
+            <p>Keyboard Gobloon has no ads, no paid tier and no tracking. If it saves you some retyping, a donation helps pay for the time that goes into every release.</p>
+          </div>
+          <a class="btn btn-ghost" href="https://www.paypal.com/paypalme/h0userus" rel="noopener">
+            <i class="ph-bold ph-paypal-logo" aria-hidden="true"></i> Donate with PayPal
+          </a>
+        </div>
+        <div class="support card reveal">
+          <div class="benefit-icon"><i class="ph ph-chats-circle" aria-hidden="true"></i></div>
+          <div>
+            <h2>Join the community</h2>
+            <p>Ask questions, report bugs and hear about new releases first on the Gobloon Discord server, shared with Joystick Gobloon.</p>
+          </div>
+          <a class="btn btn-ghost" href="https://discord.gg/8cd9APqwG4" rel="noopener">
+            <i class="ph-bold ph-discord-logo" aria-hidden="true"></i> Join on Discord
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Final CTA -->
+    <section aria-labelledby="final-title">
+      <div class="wrap">
+        <div class="final reveal">
+          <h2 id="final-title" class="gradient">Stop retyping.<br>Press Pause.</h2>
+          <p>Free, open source and portable if you want it.</p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="https://github.com/h0useRus/KeyboardGobloon/releases">
+              <i class="ph-bold ph-download-simple" aria-hidden="true"></i>
+              Download for free
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <div class="foot">
+        <div>
+          <a class="brand" href="index.html"><img src="img/icon.svg" alt="" width="24" height="24"> Keyboard Gobloon</a>
+          <p>A sibling of <a href="https://h0userus.github.io/gobloon/">Joystick Gobloon</a>.</p>
+        </div>
+        <div>
+          <h3>Project</h3>
+          <ul>
+            <li><a href="https://github.com/h0useRus/KeyboardGobloon/releases">Releases</a></li>
+            <li><a href="https://github.com/h0useRus/KeyboardGobloon/issues">Report a bug</a></li>
+            <li><a href="https://github.com/h0useRus/KeyboardGobloon">Source code</a></li>
+            <li><a href="https://discord.gg/8cd9APqwG4" rel="noopener">Discord</a></li>
+            <li><a href="https://www.paypal.com/paypalme/h0userus" rel="noopener">Donate with PayPal</a></li>
+          </ul>
+        </div>
+        <div>
+          <h3>Legal</h3>
+          <ul>
+            <li><a href="privacy.html">Privacy</a></li>
+            <li><a href="https://github.com/h0useRus/KeyboardGobloon/blob/main/LICENSE">License and terms (MIT)</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="main.js" defer></script>
+</body>
+</html>
