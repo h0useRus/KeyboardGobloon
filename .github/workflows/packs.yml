@@ -54,8 +54,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # A pre-release: GitHub never shows it as the app's latest release.
           if ! gh release view packs >/dev/null 2>&1; then
-            gh release create packs --title "Language packs" --latest=false \
+            gh release create packs --title "Language packs" --prerelease --latest=false \
               --target "${{ github.sha }}" \
               --notes "Language packs for Keyboard Gobloon's auto layout switching. English and Russian come with the app; the others download from Settings. Each pack's data license is inside the .lng file."
           fi
