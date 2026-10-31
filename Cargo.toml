@@ -1,0 +1,24 @@
+[workspace]
+resolver = "2"
+members = ["crates/*"]
+
+[workspace.package]
+# Local builds only: releases take their version from the commits (.github/scripts/next-version.sh).
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+
+[workspace.dependencies]
+kbg-core = { path = "crates/kbg-core" }
+kbg-platform = { path = "crates/kbg-platform" }
+# Shared with Joystick Gobloon. Local work on it: .cargo/config.toml.off (CLAUDE.md, Layout).
+gob-i18n = { git = "https://github.com/h0useRus/gobloon-common-ui", tag = "v0.1.0" }
+windows = "0.62"
+log = { version = "0.4", features = ["std"] }
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
+# The background process stays small; a panic inside a hook aborts anyway.
+panic = "abort"

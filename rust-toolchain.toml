@@ -1,0 +1,5 @@
+# One Rust version for local builds and CI, so both run the same compiler and Clippy.
+# Move to a newer Rust on purpose by changing this line.
+[toolchain]
+channel = "1.99.0"
+components = ["rustfmt", "clippy"]
