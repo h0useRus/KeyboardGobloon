@@ -42,6 +42,14 @@ Plans (local only, gitignored): plans/ROADMAP.md (milestones M0a-M6). Work on ON
   `KeyboardGobloon` (types, exe, paths), `KEYBOARD_GOBLOON_` (env vars), `kbg-` (internal crates), `gob-` = shared crates.
 - Settings: TOML in %APPDATA%\KeyboardGobloon\settings.gob; a `settings.gob` next to the exe makes that folder the data
   folder (portable). Log: KeyboardGobloon.log there (`log` crate, English).
+- Logo: assets/icon/KeyboardGobloon.svg (the goblin as a green keycap, no letters: nothing language-specific);
+  `python tools/icon.py` renders it with headless Chrome into the .ico (all sizes) and the 256 px PNG. Drafts of
+  rejected variants in assets/icon/drafts. The tray never shows the logo: a plain green keycap with the language as two
+  letters or the country flag (drafts/tray-*.svg; the user approved that design).
+- Website: site/ is h0userus.github.io/keyboard-gobloon/ (styles.css + main.js copied from Joystick Gobloon's site -
+  keep them in step; our additions in keyboard.css). website.yml pushes it to the Pages repo h0useRus/keyboard-gobloon
+  on main (deploy key secret KEYBOARD_GOBLOON_DEPLOY_KEY), so the site describes the released version. User
+  documentation lives there, not in Markdown.
 - License MIT, free, donations via PayPal https://www.paypal.com/paypalme/h0userus (README, About tab, website).
 - Branches: development on `dev`; work branches from `dev`, merged back by pull request. `main` only gets release
   requests: a PR from `dev` whose title contains the version it releases (release-request.yml). Never commit to `main`.
