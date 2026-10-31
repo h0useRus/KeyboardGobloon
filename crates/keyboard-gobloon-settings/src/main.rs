@@ -163,6 +163,20 @@ impl App {
         }
         ui.add_space(gob_ui::SPACE_L);
 
+        section_title(ui, icon::KEYBOARD, &i18n.tr("general-typing"));
+        if ui
+            .add(gob_ui::switch(
+                &mut self.settings.auto_switch,
+                i18n.tr("general-auto-switch"),
+            ))
+            .on_hover_text(i18n.tr("general-auto-switch-tip"))
+            .changed()
+        {
+            self.save();
+        }
+        let i18n = &self.i18n;
+        ui.add_space(gob_ui::SPACE_L);
+
         section_title(ui, icon::PALETTE, &i18n.tr("general-appearance"));
         let mut changed = false;
         // Three theme buttons, as in Joystick Gobloon.

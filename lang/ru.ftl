@@ -13,6 +13,9 @@ tab-about = О программе
 # General tab
 general-startup = Запуск
 general-autostart = Запускать вместе с Windows
+general-typing = Набор текста
+general-auto-switch = Исправлять слова, набранные не в той раскладке
+general-auto-switch-tip = Когда слово закончено, Keyboard Gobloon перепечатывает его в нужной раскладке и переключается на неё. Pause сразу после этого отменяет исправление. Работает для языков с языковым пакетом (английский, русский).
 general-appearance = Оформление
 general-language = Язык
 general-language-system = Как в Windows

@@ -13,6 +13,9 @@ tab-about = About
 # General tab
 general-startup = Startup
 general-autostart = Start with Windows
+general-typing = Typing
+general-auto-switch = Fix words typed in the wrong layout
+general-auto-switch-tip = When a word ends, Keyboard Gobloon retypes it in the right layout and switches to it. Pause right after undoes it. Works for languages with a language pack (English, Russian).
 general-appearance = Appearance
 general-language = Language
 general-language-system = Same as Windows
