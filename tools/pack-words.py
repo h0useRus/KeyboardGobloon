@@ -11,7 +11,7 @@ one `word count` per line (count = uses per billion words, 0 = unknown), for kbg
 
 The lists are generated (gitignored); the SCOWL and Hunspell notices are copied to
 packs/<code>/LICENSE-SCOWL.txt and LICENSE-HUNSPELL.txt.
-Needs: pip install wordfreq pymorphy3 pymorphy3-dicts-ru spylls
+Needs: pip install -r tools/pack-requirements.txt
 Run from the repository root: python tools/pack-words.py
 """
 
@@ -32,7 +32,11 @@ SCOWL_FILE = re.compile(
     r"/final/(english|american|british|british_z|canadian|australian)"
     r"-(words|upper|proper-names|contractions)\.(\d+)$"
 )
-HUNSPELL = "https://raw.githubusercontent.com/wooorm/dictionaries/main/dictionaries/{code}/{file}"
+# A fixed commit of wooorm/dictionaries, so every build gets the same words.
+HUNSPELL = (
+    "https://raw.githubusercontent.com/wooorm/dictionaries/"
+    "8cfea406b505e4d7df52d5a19bce525df98c54ab/dictionaries/{code}/{file}"
+)
 # wordfreq words missing from the dictionary are added from this Zipf value on (about 3 uses
 # per million words): common enough to be real words, not typos or foreign names.
 COMMON = 3.5

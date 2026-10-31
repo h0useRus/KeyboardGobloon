@@ -1,0 +1,5 @@
+# tools/pack-words.py, pinned so the packs come out the same everywhere (packs.yml).
+wordfreq==3.1.1
+pymorphy3==2.0.6
+pymorphy3-dicts-ru==2.4.417150.4580142
+spylls==0.1.7
