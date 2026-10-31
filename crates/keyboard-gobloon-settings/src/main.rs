@@ -6,6 +6,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod hotkeys;
+mod languages;
 
 use std::path::{Path, PathBuf};
 
@@ -50,6 +51,7 @@ const PALETTES: Palettes = Palettes {
 enum Tab {
     General,
     Hotkeys,
+    Languages,
     About,
 }
 
@@ -61,6 +63,7 @@ struct App {
     logo: egui::TextureHandle,
     autostart: bool,
     recorder: hotkeys::Recorder,
+    languages: languages::Languages,
     status: Option<String>,
 }
 
@@ -80,7 +83,8 @@ fn set_language(i18n: &mut I18n, code: &str) {
     i18n.set_language(&code);
 }
 
-/// Debug builds open the tab named in `KEYBOARD_GOBLOON_TAB` (general | hotkeys | about), to
+/// Debug builds open the tab named in `KEYBOARD_GOBLOON_TAB` (general | hotkeys | languages |
+/// about), to
 /// check a page by screenshot without clicking.
 fn start_tab() -> Tab {
     let wanted = cfg!(debug_assertions)
@@ -88,6 +92,7 @@ fn start_tab() -> Tab {
         .flatten();
     match wanted.as_deref() {
         Some("hotkeys") => Tab::Hotkeys,
+        Some("languages") => Tab::Languages,
         Some("about") => Tab::About,
         _ => Tab::General,
     }
@@ -115,6 +120,7 @@ impl App {
             ),
             egui::TextureOptions::LINEAR,
         );
+        let languages = languages::Languages::new(dir.clone());
         Self {
             i18n,
             settings,
@@ -123,6 +129,7 @@ impl App {
             logo,
             autostart: kbg_platform::autostart(),
             recorder: hotkeys::Recorder::default(),
+            languages,
             status: None,
         }
     }
@@ -317,6 +324,7 @@ impl eframe::App for App {
                 for (tab, glyph, key) in [
                     (Tab::General, icon::SLIDERS_HORIZONTAL, "tab-general"),
                     (Tab::Hotkeys, icon::KEYBOARD, "tab-hotkeys"),
+                    (Tab::Languages, icon::TRANSLATE, "tab-languages"),
                     (Tab::About, icon::INFO, "tab-about"),
                 ] {
                     if gob_ui::tab(ui, self.tab == tab, glyph, &self.i18n.tr(key)).clicked() {
@@ -337,6 +345,11 @@ impl eframe::App for App {
                         if let Some(note) = status {
                             self.status = Some(note);
                         }
+                    }
+                }
+                Tab::Languages => {
+                    if let Some(note) = self.languages.show(ui, &self.i18n) {
+                        self.status = Some(note);
                     }
                 }
                 Tab::About => self.about(ui),

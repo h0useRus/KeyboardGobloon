@@ -8,6 +8,7 @@ tray-exit = Exit
 # Settings window: tabs
 tab-general = General
 tab-hotkeys = Hotkeys
+tab-languages = Languages
 tab-about = About
 
 # General tab
@@ -51,7 +52,22 @@ about-source = Source code
 about-issues = Report a bug
 about-license = Free and open source under the MIT license.
 
+# Languages tab
+languages-intro = Language packs let Keyboard Gobloon spot words typed in the wrong layout. English and Russian come with the app; download the others here. A pack works when Windows has a keyboard layout for its language.
+languages-included = Included
+languages-installed = Version { $version }
+languages-download = Download
+languages-update = Update to the new version
+languages-delete = Delete
+languages-no-layout = Windows has no { $name } keyboard layout: add one in the Windows settings to use this pack.
+languages-loading = Loading the list of languages…
+languages-offline = Could not load the list of languages: { $error }
+languages-retry = Try again
+
 # Status line
 status-saved = Saved.
 status-not-running = Saved. Keyboard Gobloon is not running: the settings apply when it starts.
 status-autostart-failed = Could not change starting with Windows.
+status-pack-downloaded = { $name } downloaded.
+status-pack-failed = { $name } could not be downloaded: { $error }
+status-pack-deleted = { $name } deleted.

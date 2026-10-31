@@ -44,9 +44,11 @@ Plans (local only, gitignored): plans/ROADMAP.md (milestones M0a-M6). Work on ON
   logfile.rs; build.rs embeds version + Windows resources
 - crates/keyboard-gobloon-settings  settings window -> KeyboardGobloonSettings.exe (eframe with the glow renderer:
   wgpu took ~400 MB; egui + gob-ui, Joystick Gobloon's look): General (autostart, theme buttons, language), Hotkeys
-  (record via held_keys polling; the app's hotkeys rest while recording), About. Saves on every change and posts
+  (record via held_keys polling; the app's hotkeys rest while recording), Languages (languages.rs: packs.json from the
+  `packs` release on first open, downloads checked by size + SHA-256 into <data>\packs\<code>.lng, ureq over native-tls),
+  About. Saves on every change and posts
   `KeyboardGobloon.reload` to the app's hidden window (class `KeyboardGobloon.tray`). Debug builds open a tab from
-  env `KEYBOARD_GOBLOON_TAB` = general | hotkeys | about (for screenshots)
+  env `KEYBOARD_GOBLOON_TAB` = general | hotkeys | languages | about (for screenshots)
 
 ## Rules
 - **No AI attribution, ever** (the user's top rule): no "Co-Authored-By: Claude", no "Generated with Claude Code",

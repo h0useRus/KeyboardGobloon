@@ -8,6 +8,7 @@ tray-exit = Выход
 # Settings window: tabs
 tab-general = Общие
 tab-hotkeys = Горячие клавиши
+tab-languages = Языки
 tab-about = О программе
 
 # General tab
@@ -51,7 +52,22 @@ about-source = Исходный код
 about-issues = Сообщить об ошибке
 about-license = Бесплатно и с открытым кодом, лицензия MIT.
 
+# Languages tab
+languages-intro = Языковые пакеты помогают Keyboard Gobloon замечать слова, набранные не в той раскладке. Английский и русский входят в программу, остальные можно скачать здесь. Пакет работает, если в Windows есть раскладка для его языка.
+languages-included = Встроен
+languages-installed = Версия { $version }
+languages-download = Скачать
+languages-update = Обновить до новой версии
+languages-delete = Удалить
+languages-no-layout = В Windows нет раскладки для языка «{ $name }»: добавьте её в параметрах Windows, чтобы пакет работал.
+languages-loading = Загрузка списка языков…
+languages-offline = Не удалось загрузить список языков: { $error }
+languages-retry = Повторить
+
 # Status line
 status-saved = Сохранено.
 status-not-running = Сохранено. Keyboard Gobloon не запущен: настройки вступят в силу при запуске.
 status-autostart-failed = Не удалось изменить запуск вместе с Windows.
+status-pack-downloaded = «{ $name }»: скачан.
+status-pack-failed = Не удалось скачать «{ $name }»: { $error }
+status-pack-deleted = «{ $name }»: удалён.
