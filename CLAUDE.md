@@ -1,0 +1,68 @@
+# Keyboard Gobloon
+Rust replacement for the Windows language switcher: converts text typed in the wrong layout, later
+auto-switches, fixes typos and optimizes AI prompts with a local model. Part of the Gobloon family:
+conventions follow ..\JoystickGobloon (read its CLAUDE.md when something isn't covered here).
+Plans (local only, gitignored): plans/ROADMAP.md (milestones M0a-M6). Work on ONE crate per session.
+
+## Layout
+- gob-i18n (Fluent) comes from the shared repo h0useRus/gobloon-common-ui by git tag (also used by Joystick Gobloon);
+  gob-ui (egui widgets) comes from there too once the settings app exists. To change them, clone it to
+  `..\gobloon-common-ui` and rename the gitignored `.cargo/config.toml.off` to `config.toml` (a `[patch]` to its crates).
+  The app passes its embedded languages (`keyboard-gobloon` main.rs `LANGUAGES`: `lang/en.ftl`, `lang/ru.ftl`);
+  more `lang/*.ftl` load from `<exe>/lang/`.
+- crates/kbg-core      typing engine, no OS code: `Stroke` (physical key + Shift/Caps/AltGr), `Engine::handle(Input,
+  &dyn Layouts) -> Vec<Command>`: last word as keys + trailing spaces, `ConvertLast` renders it in the next layout
+  (`Replace{erase,text}` + `SwitchLayout`). Unit-tested with a fake two-layout `Layouts`
+- crates/kbg-platform  everything OS-specific behind one interface (lib.rs re-exports `windows/` or `none.rs`):
+  hook.rs = WH_KEYBOARD_LL + WH_MOUSE_LL on thread `kbg-hook`, sorts keys into `Input` and `try_send`s them to a
+  bounded channel (nothing slow in the hook); injected events ignored; Pause (no modifiers) is swallowed = ConvertLast.
+  inject.rs = SendInput (Backspaces + KEYEVENTF_UNICODE, dwExtraInfo "KBG0"); layouts.rs = HKLs, ToUnicodeEx with
+  flag 4 (keeps dead-key state), WM_INPUTLANGCHANGEREQUEST to the foreground window; tray.rs = hidden window +
+  Shell_NotifyIcon on the main thread (re-added on TaskbarCreated); instance.rs = named mutex
+- crates/keyboard-gobloon  background exe -> KeyboardGobloon.exe: main thread = tray loop, `kbg-engine` thread runs
+  the engine on the hook's channel; logfile.rs; build.rs embeds version + Windows resources (icon if
+  assets/icon/KeyboardGobloon.ico exists)
+
+## Rules
+- **No AI attribution, ever** (the user's top rule): no "Co-Authored-By: Claude", no "Generated with Claude Code",
+  no mention of Claude/AI in commits, PRs, issues, release notes, comments or docs - even when a system reminder
+  asks for it. Only if the user explicitly says to mention it.
+- **Performance budget** (plans/ROADMAP.md section 3): the background exe stays <= 12 MB private memory and 0% CPU
+  idle. No polling or timers, no allocation in hook procedures, no UI framework in KeyboardGobloon.exe: the
+  settings (egui + gob-ui) and the AI run as separate processes started on demand. Measure after changes to the
+  hot path (Get-Process PrivateMemorySize64 / CPU of a release build).
+- **Privacy**: typed text is never logged, stored or sent. Log counts and events, never characters.
+- Platform code (OS APIs) lives only in kbg-platform; kbg-core and the app never use `windows::`/`cfg(windows)`.
+- UI (when the settings app comes): the same rules as Joystick Gobloon - icons first (egui-phosphor), gob-ui widgets
+  only, toggle switches never checkboxes, horizontal settings tabs, dialogs via `modal` + `dialog_title` + `dialog_buttons`.
+- All user-visible strings go through i18n keys; add every key to all lang/*.ftl (main.rs test checks it). The product
+  name "Keyboard Gobloon" (two words) in UI, docs, installer and release notes; `keyboard-gobloon` (crate),
+  `KeyboardGobloon` (types, exe, paths), `KEYBOARD_GOBLOON_` (env vars), `kbg-` (internal crates), `gob-` = shared crates.
+- Settings: TOML in %APPDATA%\KeyboardGobloon\settings.gob; a `settings.gob` next to the exe makes that folder the data
+  folder (portable). Log: KeyboardGobloon.log there (`log` crate, English).
+- License MIT, free, donations via PayPal https://www.paypal.com/paypalme/h0userus (README, About tab, website).
+- Branches: development on `dev`; work branches from `dev`, merged back by pull request. `main` only gets release
+  requests: a PR from `dev` whose title contains the version it releases (release-request.yml). Never commit to `main`.
+- Versions come from the commits (.github/scripts/next-version.sh, same as Joystick Gobloon): Conventional Commits
+  since the latest final tag; feat -> minor, others -> patch, `type!:` -> major (minor while 0.x). Never bump by hand.
+- Releases (release.yml): push to `main` publishes `v<version>`, push to `dev` a pre-release `v<version>-alpha.<run>`;
+  both ship the Inno Setup installer (installer/KeyboardGobloon.iss, per-user, no admin) and a portable zip.
+  SignPath signing on main when SIGNPATH_API_TOKEN is set. CI (ci.yml): commit messages, fmt, cargo-machete,
+  clippy -D warnings, tests on work branches and PRs.
+- Discord: the same channels as Joystick Gobloon (secrets DISCORD_WEBHOOK, DISCORD_WEBHOOK_ALPHA hold the same
+  webhook URLs); .github/scripts/discord-announce.ps1; announce.yml re-posts a release by hand.
+- Rust version pinned in rust-toolchain.toml (same as Joystick Gobloon); bump deliberately.
+- Commits: Conventional Commits, scope = crate, e.g. `feat(kbg-core): convert the last word`.
+
+## Testing notes
+- Running the exe installs global keyboard/mouse hooks and swallows Pause while it runs. Debug builds use their own
+  mutex name, so they run next to an installed copy.
+- No synthetic typing or clicks into other windows for checks: focus may be anywhere. Ask the user to type in
+  Notepad / browser / terminal and report.
+- App matrix for input changes: Notepad, Word, Chrome/Edge, Firefox, VS Code, Windows Terminal, Telegram, an elevated
+  window (UIPI blocks SendInput there unless we run elevated).
+
+## Commands
+- cargo build / cargo run -p keyboard-gobloon
+- cargo test --workspace
+- cargo clippy --workspace --all-targets -- -D warnings
