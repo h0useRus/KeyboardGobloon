@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/icon/KeyboardGobloon.svg" width="140" alt="Keyboard Gobloon logo">
+</p>
+
 <h1 align="center">Keyboard Gobloon</h1>
 
 <p align="center">

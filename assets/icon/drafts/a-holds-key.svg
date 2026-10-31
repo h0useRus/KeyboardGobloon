@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+<!-- The Joystick Gobloon goblin (same head, ears and face) holding a keycap with a Latin and a Cyrillic letter. -->
+<g stroke="#fff" stroke-width="14" stroke-linejoin="round" fill="#fff">
+  <circle cx="128" cy="124" r="84"/>
+  <circle cx="62.1" cy="68.7" r="30"/><circle cx="193.9" cy="68.7" r="30"/>
+  <rect x="128" y="150" width="92" height="86" rx="16" transform="rotate(-10 174 193)"/>
+</g>
+<circle cx="62.1" cy="68.7" r="30" fill="#9acd32"/><circle cx="62.1" cy="68.7" r="16.5" fill="#6f9a1c"/><circle cx="193.9" cy="68.7" r="30" fill="#9acd32"/><circle cx="193.9" cy="68.7" r="16.5" fill="#6f9a1c"/>
+<circle cx="128" cy="124" r="84" fill="#9acd32"/>
+<path d="M72 80l40 14" stroke="#3d5a0a" stroke-width="9" stroke-linecap="round"/>
+<ellipse cx="92" cy="110" rx="14" ry="10" fill="#fff"/><circle cx="94" cy="111" r="6" fill="#111"/>
+<path d="M146 92q16-10 32 0" stroke="#3d5a0a" stroke-width="7" fill="none" stroke-linecap="round"/>
+<path d="M70 150q58 64 116 0q-58 34-116 0z" fill="#3a1606"/>
+<path d="M80 158l4-20 7 22z M176 158l-4-20-7 22z" fill="#fff"/>
+<ellipse cx="176" cy="240" rx="50" ry="7" fill="#000" opacity=".3"/>
+<g transform="rotate(-10 174 193)">
+  <rect x="128" y="150" width="92" height="86" rx="16" fill="#2e3440"/>
+  <rect x="136" y="154" width="76" height="66" rx="11" fill="#4c566a"/>
+  <text x="146" y="188" font-family="Segoe UI, sans-serif" font-weight="700" font-size="32" fill="#eceff4">A</text>
+  <text x="177" y="214" font-family="Segoe UI, sans-serif" font-weight="700" font-size="28" fill="#9acd32">Я</text>
+</g>
+</svg>

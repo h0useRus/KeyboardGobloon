@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+<!-- 16-24 px sizes of the app icon: the keycap on goblin green, like Joystick Gobloon's tray icon. -->
+<circle cx="128" cy="128" r="122" fill="#8cc82c" stroke="#5f8a17" stroke-width="8"/>
+<g transform="rotate(-10 128 128)">
+  <rect x="50" y="52" width="156" height="152" rx="26" fill="#2e3440"/>
+  <rect x="64" y="58" width="128" height="116" rx="18" fill="#4c566a"/>
+  <text x="128" y="156" text-anchor="middle" font-family="Segoe UI, sans-serif" font-weight="700" font-size="104" fill="#eceff4">A</text>
+</g>
+</svg>
