@@ -10,6 +10,7 @@ mod eval;
 #[cfg(test)]
 mod fake;
 mod keys;
+pub mod lng;
 mod pack;
 mod text;
 mod timings;

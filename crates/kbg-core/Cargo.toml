@@ -10,6 +10,8 @@ fst.workspace = true
 kbg-settings.workspace = true
 serde.workspace = true
 toml.workspace = true
+# .lng language packs are zips: reading and unpacking only.
+zip = { workspace = true, features = ["deflate-flate2-zlib-rs"] }
 
 [dev-dependencies]
 # Tests build small packs the same way the real ones are built.
