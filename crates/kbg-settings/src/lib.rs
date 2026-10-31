@@ -106,13 +106,26 @@ impl Hotkeys {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Settings {
     /// UI language code; empty follows the system.
     pub language: String,
     pub theme: Theme,
+    /// Retype words typed in the wrong layout as they end (needs the languages' packs).
+    pub auto_switch: bool,
     pub hotkeys: Hotkeys,
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        Self {
+            language: String::new(),
+            theme: Theme::default(),
+            auto_switch: true,
+            hotkeys: Hotkeys::default(),
+        }
+    }
 }
 
 /// Folder of settings and the log: the exe's folder when it holds a `settings.gob` (portable
@@ -155,6 +168,9 @@ impl Settings {
         if let Some(Ok(v)) = field("theme").map(toml::Value::try_into) {
             settings.theme = v;
         }
+        if let Some(Ok(v)) = field("auto_switch").map(toml::Value::try_into) {
+            settings.auto_switch = v;
+        }
         if let Some(toml::Value::Table(hotkeys)) = field("hotkeys") {
             for (name, value) in hotkeys {
                 let one = toml::Table::from_iter([(name, value)]);
@@ -190,6 +206,7 @@ mod tests {
         let mut s = Settings {
             language: "ru".into(),
             theme: Theme::Dark,
+            auto_switch: false,
             ..Default::default()
         };
         s.hotkeys.switch_layout = Some("RCtrl".parse().unwrap());
@@ -207,6 +224,15 @@ mod tests {
             "theme = \"purple\"\n[hotkeys]\nconvert_last = \"F9\"\nchange_case = \"Hyper+Q\"\n",
         );
         assert_eq!(s.theme, Theme::System);
+        assert!(s.auto_switch);
+        assert!(
+            !Settings::parse(
+                "theme = 1
+auto_switch = false
+"
+            )
+            .auto_switch
+        );
         assert_eq!(s.hotkeys.convert_last, Some("F9".parse().unwrap()));
         assert_eq!(s.hotkeys.change_case, Hotkeys::default().change_case);
     }
