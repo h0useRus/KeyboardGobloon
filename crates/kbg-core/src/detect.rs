@@ -1,8 +1,9 @@
 //! Wrong-layout detection: the last word's keys are shown in every layout that has a language
 //! pack, and each rendering is scored by its pack (a dictionary word, or how familiar its letter
 //! runs are). The detector only answers when another layout clearly wins; a word it is unsure
-//! about stays as typed. The thresholds are tuned with `real_packs` below (2026-10-31, top 50 000
-//! words weighted by use: false switches 0.008% en / 0.003% ru, wrong layout caught 99.0% / 99.1%).
+//! about stays as typed. The thresholds are tuned on the real packs with eval.rs (2026-10-31: en, ru,
+//! es, fr, de, pl in pairs, top 50 000 words weighted by use: false switches at most 0.021%, wrong
+//! layout caught 95.6-99.6% wherever the layouts type different letters).
 
 use std::sync::Arc;
 
@@ -56,13 +57,16 @@ impl Detector {
         // Without a pack for the current layout there is nothing to compare against.
         let (_, pack) = self.packs.iter().find(|(l, _)| *l == current)?;
         let typed = layouts.render(current, word)?;
-        if typed.chars().any(|c| c.is_ascii_digit()) || camel_case(&typed) {
+        if camel_case(&typed) {
             return None;
         }
+        // `2nd` or `mp3` stay, but AZERTY types é, è, ç, à on the digit keys: `été` in US is `2t2`.
+        let digits = typed.chars().any(|c| c.is_ascii_digit());
         let here = score(pack, &typed);
         let mut best: Option<(LayoutId, Score)> = None;
         for (layout, pack) in self.packs.iter().filter(|(l, _)| *l != current) {
-            let Some(text) = layouts.render(*layout, word) else {
+            // The same text in another layout (Spanish and US letters): nothing to fix there.
+            let Some(text) = layouts.render(*layout, word).filter(|t| *t != typed) else {
                 continue;
             };
             let other = score(pack, &text);
@@ -70,7 +74,8 @@ impl Detector {
                 None => true,
                 Some((_, b)) => (other.hit, other.freq, -other.cost) > (b.hit, b.freq, -b.cost),
             };
-            if other.letters >= MIN_LETTERS && other.cost.is_finite() && better {
+            let sure = other.hit || !digits;
+            if other.letters >= MIN_LETTERS && other.cost.is_finite() && sure && better {
                 best = Some((*layout, other));
             }
         }
@@ -88,10 +93,10 @@ impl Detector {
     }
 }
 
-/// Scores the letters of `text` (punctuation around them is left out).
+/// Scores the letters of `text` (punctuation around them is left out, digits are not).
 fn score(pack: &Pack, text: &str) -> Score {
     let core = text
-        .trim_matches(|c: char| !c.is_alphabetic())
+        .trim_matches(|c: char| !c.is_alphanumeric())
         .to_lowercase();
     let cost = pack.letter_cost(&core).unwrap_or(f32::INFINITY);
     let freq = pack.frequency(&core).filter(|_| cost.is_finite());
@@ -171,69 +176,6 @@ pub(crate) mod tests {
         assert_eq!(detect(EN, "ghbDtn"), None);
     }
 
-    /// The bundled packs on the most common words (wordfreq top 50 000 per language), weighted by
-    /// use: typed in the right layout (any switch is false), and in the other one (should switch
-    /// back). Needs `target/packs/<code>/` (kbg-pack-builder output, unzipped) and
-    /// `target/pack-data/eval-<code>.txt` (`word frequency` lines).
-    #[test]
-    #[ignore = "needs the built packs; cargo test -p kbg-core -- --ignored --nocapture"]
-    fn real_packs() {
-        use std::fs;
-        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../target");
-        let load = |code: &str| {
-            let dir = root.join("packs").join(code);
-            let pack = Pack::new(
-                &fs::read_to_string(dir.join("pack.toml")).unwrap(),
-                crate::Bytes::new(fs::read(dir.join("words.fst")).unwrap()),
-                crate::Bytes::new(fs::read(dir.join("trigrams.bin")).unwrap()),
-            );
-            Arc::new(pack.unwrap())
-        };
-        let detector = Detector::new(vec![(EN, load("en")), (RU, load("ru"))]);
-        let fake = Fake::new(EN);
-        for (code, here, there) in [("en", EN, RU), ("ru", RU, EN)] {
-            let list = fs::read_to_string(root.join(format!("pack-data/eval-{code}.txt"))).unwrap();
-            let (mut total, mut long, mut false_switch, mut caught) = (0.0, 0.0, 0.0, 0.0);
-            let (mut wrong, mut missed) = (Vec::new(), Vec::new());
-            for line in list.lines() {
-                let (word, f) = line.split_once(' ').unwrap();
-                let f: f64 = f.parse().unwrap();
-                let Some(keys) = word
-                    .chars()
-                    .map(|c| fake.stroke(here, c))
-                    .collect::<Option<Vec<_>>>()
-                else {
-                    continue;
-                };
-                total += f;
-                if detector.detect(&keys, here, &fake).is_some() {
-                    false_switch += f;
-                    wrong.push(word);
-                }
-                if keys.len() >= MIN_LETTERS {
-                    long += f;
-                    if detector.detect(&keys, there, &fake) == Some(here) {
-                        caught += f;
-                    } else {
-                        missed.push(word);
-                    }
-                }
-            }
-            println!(
-                "{code}: false switches {:.3}% ({} words, top: {:?})",
-                100.0 * false_switch / total,
-                wrong.len(),
-                &wrong[..wrong.len().min(25)]
-            );
-            println!(
-                "{code}: wrong layout caught {:.2}% of words with {MIN_LETTERS}+ letters ({} missed, top: {:?})",
-                100.0 * caught / long,
-                missed.len(),
-                &missed[..missed.len().min(25)]
-            );
-        }
-    }
-
     #[test]
     fn layouts_without_a_pack_are_never_left() {
         let fake = Fake::new(EN);
@@ -245,5 +187,26 @@ pub(crate) mod tests {
                 .collect(),
         );
         assert_eq!(ru_only.detect(&strokes(EN, "ghbdtn"), EN, &fake), None);
+    }
+
+    #[test]
+    fn layouts_typing_the_same_text_are_not_candidates() {
+        // A Latin layout whose keys type what US keys type; its pack lacks the English word.
+        let es = LayoutId(0x040A_040A);
+        let fake = Fake::new(es);
+        let mut packs = detector().packs;
+        packs.push((
+            es,
+            Arc::new(pack(
+                "es",
+                EN_LETTERS,
+                "hola 50
+casa 40
+",
+            )),
+        ));
+        let detector = Detector::new(packs);
+        assert_eq!(detector.detect(&strokes(EN, "hello"), es, &fake), None);
+        assert_eq!(detector.detect(&strokes(EN, "ghbdtn"), es, &fake), Some(RU));
     }
 }

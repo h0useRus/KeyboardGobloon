@@ -6,6 +6,8 @@
 mod detect;
 mod engine;
 #[cfg(test)]
+mod eval;
+#[cfg(test)]
 mod fake;
 mod keys;
 mod pack;
