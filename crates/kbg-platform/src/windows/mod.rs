@@ -1,7 +1,10 @@
 mod hook;
+mod icon;
 mod inject;
 mod instance;
 mod layouts;
+mod selection;
+mod system;
 mod tray;
 
 use std::path::PathBuf;
@@ -9,11 +12,17 @@ use std::path::PathBuf;
 use windows::Win32::Globalization::GetUserDefaultLocaleName;
 use windows::Win32::System::SystemInformation::GetLocalTime;
 
-pub use hook::{InputHook, start as start_input};
+pub use hook::{InputHook, enabled, set_enabled, set_hotkeys, start as start_input};
 pub use inject::replace;
 pub use instance::claim as claim_instance;
-pub use layouts::{SystemLayouts, switch as switch_layout};
-pub use tray::run as run_tray;
+pub use layouts::{SystemLayouts, language_letters, switch as switch_layout};
+pub use selection::transform as transform_selection;
+pub use system::{
+    allow_foreground, autostart, focus_window, held_keys, set_autostart, system_switch_keys,
+};
+pub use tray::{
+    notify_app, notify_input, notify_recording, run as run_tray, set_menu as set_tray_menu,
+};
 
 /// `%APPDATA%\KeyboardGobloon`.
 pub fn default_data_dir() -> Option<PathBuf> {

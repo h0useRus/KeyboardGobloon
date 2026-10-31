@@ -1,17 +1,27 @@
 //! Stand-ins for systems without a backend yet: the app starts, sees no input and exits.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::rc::Rc;
 use std::sync::mpsc::SyncSender;
 
 use kbg_core::{Input, LayoutId, Layouts, Stroke};
+use kbg_settings::Hotkeys;
 
-use crate::TrayMenu;
+use crate::{TrayEvent, TrayMenu};
 
 pub struct InputHook;
 
 pub fn start_input(_tx: SyncSender<Input>) -> Option<InputHook> {
     None
 }
+
+pub fn set_hotkeys(_hotkeys: &Hotkeys) {}
+
+pub fn enabled() -> bool {
+    true
+}
+
+pub fn set_enabled(_on: bool) {}
 
 pub struct SystemLayouts;
 
@@ -27,11 +37,21 @@ impl Layouts for SystemLayouts {
     fn render(&self, _layout: LayoutId, _strokes: &[Stroke]) -> Option<String> {
         None
     }
+
+    fn stroke(&self, _layout: LayoutId, _c: char) -> Option<Stroke> {
+        None
+    }
+}
+
+pub fn language_letters(_layout: LayoutId) -> String {
+    "??".into()
 }
 
 pub fn replace(_erase: usize, _text: &str) {}
 
 pub fn switch_layout(_layout: LayoutId) {}
+
+pub fn transform_selection(_change: impl FnOnce(&str) -> Option<String>) {}
 
 pub fn claim_instance() -> bool {
     true
@@ -52,4 +72,38 @@ pub fn user_language() -> Option<String> {
     None
 }
 
-pub fn run_tray(_menu: &TrayMenu) {}
+pub fn run_tray(_menu: TrayMenu, _on_event: Rc<dyn Fn(TrayEvent)>) {}
+
+pub fn set_tray_menu(_menu: TrayMenu) {}
+
+pub fn notify_input() {}
+
+pub fn notify_app() -> bool {
+    false
+}
+
+pub fn notify_recording(_on: bool) -> bool {
+    false
+}
+
+pub fn autostart() -> bool {
+    false
+}
+
+pub fn set_autostart(_exe: &Path, _on: bool) -> bool {
+    false
+}
+
+pub fn system_switch_keys() -> Vec<String> {
+    Vec::new()
+}
+
+pub fn held_keys() -> Vec<u16> {
+    Vec::new()
+}
+
+pub fn focus_window(_title: &str) -> bool {
+    false
+}
+
+pub fn allow_foreground() {}

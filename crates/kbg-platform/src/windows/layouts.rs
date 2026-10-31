@@ -3,11 +3,13 @@
 
 use std::ffi::c_void;
 
-use kbg_core::{LayoutId, Layouts, Stroke};
+use kbg_core::{Key, LayoutId, Layouts, Stroke};
 use windows::Win32::Foundation::{LPARAM, WPARAM};
+use windows::Win32::Globalization::{GetLocaleInfoW, LOCALE_SISO639LANGNAME};
 use windows::Win32::UI::Input::KeyboardAndMouse::{
-    GetKeyboardLayout, GetKeyboardLayoutList, HKL, MAPVK_VSC_TO_VK_EX, MapVirtualKeyExW,
-    ToUnicodeEx, VK_CAPITAL, VK_CONTROL, VK_LCONTROL, VK_MENU, VK_RMENU, VK_SHIFT,
+    GetKeyboardLayout, GetKeyboardLayoutList, HKL, MAPVK_VK_TO_VSC_EX, MAPVK_VSC_TO_VK_EX,
+    MapVirtualKeyExW, ToUnicodeEx, VK_CAPITAL, VK_CONTROL, VK_LCONTROL, VK_MENU, VK_RMENU,
+    VK_SHIFT, VkKeyScanExW,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
     GetForegroundWindow, GetWindowThreadProcessId, PostMessageW, WM_INPUTLANGCHANGEREQUEST,
@@ -80,6 +82,53 @@ impl Layouts for SystemLayouts {
         }
         Some(text)
     }
+
+    fn stroke(&self, layout: LayoutId, c: char) -> Option<Stroke> {
+        // Characters outside the 16-bit range have no key.
+        let unit = u16::try_from(u32::from(c)).ok()?;
+        let layout = hkl(layout);
+        // SAFETY: plain table lookups in the layout.
+        let (scan_vk, scan) = unsafe {
+            let found = VkKeyScanExW(unit, layout);
+            if found == -1 {
+                return None;
+            }
+            let vk = (found as u16) & 0xFF;
+            (
+                found as u16,
+                MapVirtualKeyExW(u32::from(vk), MAPVK_VK_TO_VSC_EX, Some(layout)),
+            )
+        };
+        // High byte: 1 Shift, 2 Ctrl, 4 Alt; Ctrl+Alt is AltGr. Ctrl or Alt alone types no text.
+        let state = scan_vk >> 8;
+        let altgr = state & 6 == 6;
+        if state & 6 != 0 && !altgr || scan == 0 {
+            return None;
+        }
+        Some(Stroke {
+            key: Key {
+                scan: (scan & 0xFF) as u16,
+                extended: scan & 0xFF00 == 0xE000,
+            },
+            shift: state & 1 != 0,
+            caps: false,
+            altgr,
+        })
+    }
+}
+
+/// Two capital letters for the layout's language, as Windows shows it (`EN`, `RU`).
+pub fn language_letters(layout: LayoutId) -> String {
+    // The low word of an HKL is its language id.
+    let lang = (layout.0 & 0xFFFF) as u32;
+    let mut buf = [0u16; 9];
+    // SAFETY: the buffer is as long as the slice says.
+    let len = unsafe { GetLocaleInfoW(lang, LOCALE_SISO639LANGNAME, Some(&mut buf)) };
+    let code = String::from_utf16_lossy(buf.get(..(len.max(1) as usize - 1)).unwrap_or(&[]));
+    if code.is_empty() {
+        return "??".into();
+    }
+    code.chars().take(2).collect::<String>().to_uppercase()
 }
 
 /// Asks the foreground window to switch to `layout`, as the system switcher does.

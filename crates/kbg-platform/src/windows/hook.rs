@@ -10,18 +10,21 @@
 //! them again when they fell silent.
 
 use std::cell::RefCell;
+use std::sync::Mutex;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, SyncSender};
 use std::thread::JoinHandle;
 use std::time::Instant;
 
 use kbg_core::{Input, Key, Stroke, Timings};
+use kbg_settings::{Action, Hotkey, Hotkeys};
 use windows::Win32::Foundation::{HINSTANCE, LPARAM, LRESULT, WPARAM};
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows::Win32::System::Threading::GetCurrentThreadId;
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     GetKeyState, GetLastInputInfo, LASTINPUTINFO, VIRTUAL_KEY, VK_BACK, VK_CAPITAL, VK_LCONTROL,
-    VK_LMENU, VK_LSHIFT, VK_LWIN, VK_NUMLOCK, VK_PAUSE, VK_RCONTROL, VK_RMENU, VK_RSHIFT, VK_RWIN,
-    VK_SCROLL, VK_SPACE,
+    VK_LMENU, VK_LSHIFT, VK_LWIN, VK_NUMLOCK, VK_RCONTROL, VK_RMENU, VK_RSHIFT, VK_RWIN, VK_SCROLL,
+    VK_SPACE,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
     CallNextHookEx, DispatchMessageW, GetForegroundWindow, GetMessageW, HC_ACTION, HHOOK,
@@ -51,12 +54,45 @@ const SHORTCUT: u8 = CTRL_L | CTRL_R | ALT_L | WIN_L | WIN_R;
 /// Scan code of the left Ctrl press Windows sends ahead of AltGr.
 const ALTGR_FAKE_CTRL: u32 = 0x21D;
 
+/// Hotkeys from the settings: set by the app on any thread, read by the hook procedure.
+static HOTKEYS: Mutex<Vec<(Hotkey, Action)>> = Mutex::new(Vec::new());
+/// Off: every key passes by untouched, except the hotkey that turns Keyboard Gobloon on again.
+static ENABLED: AtomicBool = AtomicBool::new(true);
+
+/// Takes the hotkeys from the settings (again after every change).
+pub fn set_hotkeys(hotkeys: &Hotkeys) {
+    let list = Action::ALL
+        .into_iter()
+        .filter_map(|a| hotkeys.get(a).map(|h| (h, a)))
+        .collect();
+    if let Ok(mut current) = HOTKEYS.lock() {
+        *current = list;
+    }
+}
+
+pub fn enabled() -> bool {
+    ENABLED.load(Ordering::Relaxed)
+}
+
+/// Turns Keyboard Gobloon on or off; the tray icon follows.
+pub fn set_enabled(on: bool) {
+    ENABLED.store(on, Ordering::Relaxed);
+    super::tray::notify_input();
+}
+
+fn hotkey_action(matches: impl Fn(&Hotkey) -> bool) -> Option<Action> {
+    let hotkeys = HOTKEYS.lock().ok()?;
+    hotkeys.iter().find(|(h, _)| matches(h)).map(|&(_, a)| a)
+}
+
 struct State {
     tx: SyncSender<Input>,
     mods: u8,
     caps: bool,
     /// A hotkey whose press we kept from the other programs: its release is kept too.
     swallowed: Option<VIRTUAL_KEY>,
+    /// A modifier pressed alone so far: released alone, it is a tap.
+    tap: Option<VIRTUAL_KEY>,
     foreground: usize,
     /// Time stamp of the last event either hook saw, injected ones included (tick count).
     last_seen: u32,
@@ -105,25 +141,77 @@ impl State {
         }
     }
 
+    /// The hotkeys' modifiers as held now (either side counts).
+    fn hotkey(&self, vk: VIRTUAL_KEY) -> Hotkey {
+        Hotkey {
+            ctrl: self.mods & (CTRL_L | CTRL_R) != 0,
+            alt: self.mods & (ALT_L | ALT_R) != 0,
+            shift: self.mods & (SHIFT_L | SHIFT_R) != 0,
+            win: self.mods & (WIN_L | WIN_R) != 0,
+            key: vk.0,
+        }
+    }
+
+    /// Runs a hotkey's action: turning on and off happens here, the rest in the engine.
+    fn fire(&mut self, action: Action) {
+        if action == Action::ToggleEnabled {
+            set_enabled(!enabled());
+            self.send(Input::Break);
+            return;
+        }
+        self.check_focus();
+        self.send(Input::Action(action));
+    }
+
     /// Returns true when the key must not reach the other programs.
     fn key(&mut self, info: &KBDLLHOOKSTRUCT, down: bool) -> bool {
         let vk = VIRTUAL_KEY(info.vkCode as u16);
         if vk == VK_LCONTROL && info.scanCode == ALTGR_FAKE_CTRL {
             return false;
         }
+        if !down {
+            // Switch keys act on release: the tray looks at the layout again.
+            super::tray::notify_input();
+        }
         if let Some(bit) = modifier(vk) {
             if down {
+                // A tap is a modifier pressed and released with nothing else (auto-repeat of
+                // the same key keeps it going).
+                if self.mods & bit == 0 {
+                    self.tap = (self.mods == 0).then_some(vk);
+                }
                 self.mods |= bit;
             } else {
                 self.mods &= !bit;
+                if self.tap.take() == Some(vk)
+                    && let Some(action) = hotkey_action(|h| h.is_tap() && h.key == vk.0)
+                {
+                    self.fire(action);
+                }
             }
             return false;
         }
+        self.tap = None;
         if !down {
             if self.swallowed == Some(vk) {
                 self.swallowed = None;
                 return true;
             }
+            return false;
+        }
+        if self.swallowed == Some(vk) {
+            // Auto-repeat of a hotkey: kept from the programs, run once.
+            return true;
+        }
+        let pressed = self.hotkey(vk);
+        if let Some(action) = hotkey_action(|h| *h == pressed && !h.is_tap())
+            && (enabled() || action == Action::ToggleEnabled)
+        {
+            self.swallowed = Some(vk);
+            self.fire(action);
+            return true;
+        }
+        if !enabled() {
             return false;
         }
         if vk == VK_CAPITAL {
@@ -134,10 +222,7 @@ impl State {
             return false;
         }
         self.check_focus();
-        let input = if vk == VK_PAUSE && self.mods == 0 {
-            self.swallowed = Some(vk);
-            Input::ConvertLast
-        } else if self.mods & SHORTCUT != 0 {
+        let input = if self.mods & SHORTCUT != 0 {
             Input::Break
         } else if vk == VK_BACK {
             Input::Backspace
@@ -160,7 +245,7 @@ impl State {
             }
         };
         self.send(input);
-        input == Input::ConvertLast
+        false
     }
 }
 
@@ -201,7 +286,9 @@ unsafe extern "system" fn mouse(code: i32, wparam: WPARAM, lparam: LPARAM) -> LR
             if let Some(s) = s {
                 s.last_seen = info.time;
                 if click {
+                    s.tap = None;
                     s.send(Input::Break);
+                    super::tray::notify_input();
                 }
             }
         });
@@ -287,6 +374,7 @@ pub fn start(tx: SyncSender<Input>) -> Option<InputHook> {
                 mods: 0,
                 caps,
                 swallowed: None,
+                tap: None,
                 foreground: 0,
                 last_seen: 0,
                 timings: Timings::default(),
