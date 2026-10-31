@@ -1,0 +1,11 @@
+# French pack for kbg-pack-builder. words.txt comes from tools/pack-words.py.
+code = "fr"
+name = "Français"
+version = 1
+# French (legacy AZERTY), French (standard AZERTY), Belgian French, Swiss French, Canadian French
+layouts = ["0000040C", "0001040C", "0000080C", "0000100C", "00000C0C"]
+license = "GPL-3.0-only"
+attribution = "Word forms: French Hunspell dictionary by Grammalecte / Dicollecte (via wooorm/dictionaries). Frequencies: wordfreq by Robyn Speer (CC BY-SA 4.0), including OpenSubtitles, Wikipedia, Google Books Ngrams."
+alphabet = "abcdefghijklmnopqrstuvwxyzàâæçéèêëîïôœùûüÿ'-"
+words = ["words.txt"]
+license_files = ["LICENSE.txt", "LICENSE-HUNSPELL.txt"]

@@ -1,0 +1,18 @@
+Keyboard Gobloon German language pack
+
+The data in this pack (words.fst, trigrams.bin) is licensed under the GNU General Public License,
+version 3: https://www.gnu.org/licenses/gpl-3.0.html
+It is separate from Keyboard Gobloon's code (MIT), which only reads it.
+
+Sources:
+- Word forms: the German Hunspell dictionary igerman98 by Björn Jacke (https://www.j3e.de/ispell/igerman98/), GPL-2.0 / GPL-3.0, used under GPL-3.0, as packaged by https://github.com/wooorm/dictionaries -
+  see LICENSE-HUNSPELL.txt. The dictionary's stems and affix rules were expanded into every form.
+- Word frequencies: wordfreq 3.1 by Robyn Speer, https://github.com/rspeer/wordfreq, data under
+  CC BY-SA 4.0, adapted here under GPL-3.0 (a compatible license named by Creative Commons:
+  https://creativecommons.org/share-your-work/licensing-considerations/compatible-licenses).
+  wordfreq contains data from OPUS OpenSubtitles 2018 (http://opus.nlpl.eu/, originating from
+  http://www.opensubtitles.org/), Wikipedia, ParaCrawl, the Leeds Internet Corpus and Google
+  Books Ngrams (http://books.google.com/ngrams).
+
+Changes: words were lowercased, merged with wordfreq's common words, filtered to the pack's
+alphabet, and turned into a frequency map and a letter-trigram model.

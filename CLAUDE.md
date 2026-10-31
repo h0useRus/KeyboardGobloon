@@ -30,11 +30,11 @@ Plans (local only, gitignored): plans/ROADMAP.md (milestones M0a-M6). Work on ON
 - crates/kbg-pack-builder  CLI + lib, not shipped: a source folder (`source.toml`: code, KLIDs, license, alphabet, word
   lists of `word [count]`) -> `<code>-<version>.zip` with pack.toml, words.fst (word -> Zipf x 10, 0 = no count) and
   trigrams.bin (letter-trigram costs, format in trigrams.rs), plus packs.json (size, SHA-256, URL). Deterministic zips
-- packs/en, packs/ru  pack sources: source.toml (KLIDs, alphabet) + license notices (data CC BY-SA 4.0: SCOWL, OpenCorpora,
-  wordfreq). words.txt is generated and gitignored: `python tools/pack-words.py` (pip install wordfreq pymorphy3
-  pymorphy3-dicts-ru), then `cargo run -p kbg-pack-builder -- --out target/packs packs/en packs/ru`. Detector check on
+- packs/<code>  pack sources (en, ru, es, fr, de, pl): source.toml (KLIDs, alphabet) + license notices (en, ru: CC BY-SA 4.0,
+  SCOWL/OpenCorpora + wordfreq; es, fr, de, pl: GPL-3.0, expanded Hunspell dictionaries + wordfreq). words.txt is generated and gitignored: `python tools/pack-words.py` (pip install wordfreq pymorphy3
+  pymorphy3-dicts-ru spylls), then `cargo run -p kbg-pack-builder -- --out target/packs packs/en packs/ru`. Detector check on
   real packs: unzip them to target/packs/<code>/, write target/pack-data/eval-<code>.txt (wordfreq top 50 000, `word freq`),
-  `cargo test --release -p kbg-core real_packs -- --ignored --nocapture`
+  `cargo test --release -p kbg-core eval -- --ignored --nocapture` (eval.rs: US/RU/ES/AZERTY/QWERTZ key tables)
 - crates/keyboard-gobloon  background exe -> KeyboardGobloon.exe: main thread = tray loop (tray.rs: language icon drawn
   by icon.rs, one-shot timer after key-ups/clicks/foreground changes, no idle timer), `kbg-engine` thread runs the
   engine; packs.rs loads `packs\<code>\` from the data folder and next to the exe (newer version wins) into a

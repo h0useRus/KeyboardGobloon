@@ -1,0 +1,11 @@
+# German pack for kbg-pack-builder. words.txt comes from tools/pack-words.py.
+code = "de"
+name = "Deutsch"
+version = 1
+# German, Swiss German
+layouts = ["00000407", "00000807"]
+license = "GPL-3.0-only"
+attribution = "Word forms: German Hunspell dictionary igerman98 by Björn Jacke (via wooorm/dictionaries). Frequencies: wordfreq by Robyn Speer (CC BY-SA 4.0), including OpenSubtitles, Wikipedia, Google Books Ngrams."
+alphabet = "abcdefghijklmnopqrstuvwxyzäöüß-"
+words = ["words.txt"]
+license_files = ["LICENSE.txt", "LICENSE-HUNSPELL.txt"]

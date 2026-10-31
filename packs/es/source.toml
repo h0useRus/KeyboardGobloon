@@ -1,0 +1,11 @@
+# Spanish pack for kbg-pack-builder. words.txt comes from tools/pack-words.py.
+code = "es"
+name = "Español"
+version = 1
+# Spanish, Spanish Variation, Latin American
+layouts = ["0000040A", "0001040A", "0000080A"]
+license = "GPL-3.0-only"
+attribution = "Word forms: Spanish Hunspell dictionary by the RLA-ES project (via wooorm/dictionaries). Frequencies: wordfreq by Robyn Speer (CC BY-SA 4.0), including OpenSubtitles, Wikipedia, Google Books Ngrams."
+alphabet = "abcdefghijklmnñopqrstuvwxyzáéíóúü-"
+words = ["words.txt"]
+license_files = ["LICENSE.txt", "LICENSE-HUNSPELL.txt"]

@@ -1,0 +1,11 @@
+# Polish pack for kbg-pack-builder. words.txt comes from tools/pack-words.py.
+code = "pl"
+name = "Polski"
+version = 1
+# Polish (Programmers), Polish (214)
+layouts = ["00000415", "00010415"]
+license = "GPL-3.0-only"
+attribution = "Word forms: Polish Hunspell dictionary from sjp.pl (via wooorm/dictionaries). Frequencies: wordfreq by Robyn Speer (CC BY-SA 4.0), including OpenSubtitles, Wikipedia, Google Books Ngrams."
+alphabet = "aąbcćdeęfghijklłmnńoóprsśtuvwxyzźż-"
+words = ["words.txt"]
+license_files = ["LICENSE.txt", "LICENSE-HUNSPELL.txt"]
