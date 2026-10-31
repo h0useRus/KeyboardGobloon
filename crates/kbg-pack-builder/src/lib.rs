@@ -1,11 +1,12 @@
 //! Builds Keyboard Gobloon's language packs. A source folder holds `source.toml` (see `Source`),
-//! the word lists and the data's license files; the pack is one zip with
+//! the word lists and the data's license files; the pack is one `<code>.lng` file, a zip with
 //! - `pack.toml`: code, name, version, the Windows layouts (KLIDs) it serves, license,
 //! - `words.fst`: every word form with its frequency (`words`),
 //! - `trigrams.bin`: the letter model (`trigrams`),
 //! - the license files.
 //!
-//! `packs.json` lists the zips with size and SHA-256; the app downloads packs from it.
+//! The app unpacks a `.lng` only when an installed layout needs its language. `packs.json` lists
+//! the packs with size and SHA-256; the app downloads packs from it.
 
 pub mod trigrams;
 pub mod words;
@@ -17,6 +18,8 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 pub const SOURCE: &str = "source.toml";
+/// The pack file's extension: `en.lng`.
+pub const EXTENSION: &str = "lng";
 /// The pack layout version in `pack.toml`; the app ignores packs newer than it knows.
 pub const FORMAT: u16 = 1;
 
@@ -168,9 +171,9 @@ fn read_text(path: &Path) -> Result<String, String> {
 }
 
 impl Pack {
-    /// `en-3.zip`
+    /// `en.lng` (the version is in the catalog and in `pack.toml`).
     pub fn file_name(&self) -> String {
-        format!("{}-{}.zip", self.source.code, self.source.version)
+        format!("{}.{EXTENSION}", self.source.code)
     }
 
     /// The zip. Entries carry a fixed date, so the same data gives the same bytes and hash.
@@ -253,7 +256,7 @@ license_files = ["LICENSE.txt"]
         let zip = pack.zip();
         assert_eq!(zip, pack.zip());
         let entry = pack.catalog_entry(&zip, "https://example.org/packs/");
-        assert_eq!(entry.url, "https://example.org/packs/ru-2.zip");
+        assert_eq!(entry.url, "https://example.org/packs/ru.lng");
         assert_eq!((entry.size, entry.sha256.len()), (zip.len() as u64, 64));
         let mut archive = zip::ZipArchive::new(std::io::Cursor::new(zip)).unwrap();
         assert_eq!(archive.len(), 4);

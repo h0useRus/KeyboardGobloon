@@ -1,6 +1,6 @@
 //! `kbg-pack-builder [--url <base>] --out <dir> <source dir>...`
-//! Builds each source folder into `<dir>/<code>-<version>.zip` and writes `<dir>/packs.json`.
-//! `--url` is where the zips will be downloaded from (a release's download folder); without it
+//! Builds each source folder into `<dir>/<code>.lng` and writes `<dir>/packs.json`.
+//! `--url` is where the packs will be downloaded from (a release's download folder); without it
 //! the catalog holds bare file names.
 
 use std::path::PathBuf;
