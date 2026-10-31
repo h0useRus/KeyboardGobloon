@@ -102,6 +102,8 @@ fn run_engine(rx: Receiver<Input>) {
         let wanted = DETECTOR.load(Ordering::Relaxed);
         if wanted != loaded {
             loaded = wanted;
+            // Unmaps the old packs first: unpacking a new version replaces their files.
+            engine.set_detector(None);
             let detector = (wanted != 0)
                 .then(|| packs::detector(&layouts.installed()))
                 .flatten();
