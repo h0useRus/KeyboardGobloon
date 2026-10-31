@@ -1,0 +1,20 @@
+[package]
+name = "keyboard-gobloon-settings"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Keyboard Gobloon's settings window: a separate process, started from the tray, so the app stays light"
+
+[[bin]]
+name = "KeyboardGobloonSettings"
+path = "src/main.rs"
+
+[dependencies]
+kbg-platform.workspace = true
+kbg-settings.workspace = true
+gob-i18n.workspace = true
+gob-ui.workspace = true
+eframe.workspace = true
+
+[build-dependencies]
+winresource = "0.1"
