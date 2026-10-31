@@ -25,13 +25,37 @@ fn scans() -> Vec<u16> {
 
 /// Unshifted characters per layout; `\0` = dead key. Capitals come from Shift as uppercase.
 const LAYOUTS: &[(&str, usize, &str)] = &[
-    ("en", 0x0409_0409, "1234567890-=qwertyuiop[]asdfghjkl;'`\\zxcvbnm,./"),
-    ("ru", 0x0419_0419, "1234567890-=йцукенгшщзхъфывапролджэё\\ячсмитьбю."),
-    ("es", 0x040A_040A, "1234567890'¡qwertyuiop\0+asdfghjklñ\0ºçzxcvbnm,.-"),
-    ("fr", 0x040C_040C, "&é\"'(-è_çà)=azertyuiop\0$qsdfghjklmù²*wxcvbn,;:!"),
-    ("de", 0x0407_0407, "1234567890ß\0qwertzuiopü+asdfghjklöä\0#yxcvbnm,.-"),
+    (
+        "en",
+        0x0409_0409,
+        "1234567890-=qwertyuiop[]asdfghjkl;'`\\zxcvbnm,./",
+    ),
+    (
+        "ru",
+        0x0419_0419,
+        "1234567890-=йцукенгшщзхъфывапролджэё\\ячсмитьбю.",
+    ),
+    (
+        "es",
+        0x040A_040A,
+        "1234567890'¡qwertyuiop\0+asdfghjklñ\0ºçzxcvbnm,.-",
+    ),
+    (
+        "fr",
+        0x040C_040C,
+        "&é\"'(-è_çà)=azertyuiop\0$qsdfghjklmù²*wxcvbn,;:!",
+    ),
+    (
+        "de",
+        0x0407_0407,
+        "1234567890ß\0qwertzuiopü+asdfghjklöä\0#yxcvbnm,.-",
+    ),
     // Polish (Programmers) types US letters; its own letters need AltGr.
-    ("pl", 0x0415_0415, "1234567890-=qwertyuiop[]asdfghjkl;'`\\zxcvbnm,./"),
+    (
+        "pl",
+        0x0415_0415,
+        "1234567890-=qwertyuiop[]asdfghjkl;'`\\zxcvbnm,./",
+    ),
 ];
 
 struct Tables {
@@ -119,8 +143,8 @@ fn eval() {
         };
         for (code, other) in [(a, b), (b, a)] {
             let (here, there) = (id(code), id(other));
-            let list = fs::read_to_string(target().join(format!("pack-data/eval-{code}.txt")))
-                .unwrap();
+            let list =
+                fs::read_to_string(target().join(format!("pack-data/eval-{code}.txt"))).unwrap();
             let (mut total, mut long, mut false_switch, mut caught) = (0.0, 0.0, 0.0, 0.0);
             let mut wrong = Vec::new();
             for line in list.lines() {
