@@ -1,3 +1,5 @@
+use kbg_settings::Action;
+
 use crate::keys::{LayoutId, Stroke};
 
 /// Longest word kept; longer ones are not converted (nobody mistypes a whole line as one word).
@@ -13,8 +15,8 @@ pub enum Input {
     /// The caret may have moved or the word context is gone: Enter, Tab, arrows, a shortcut,
     /// a mouse click, another window...
     Break,
-    /// Hotkey: show the last word in the next layout and switch to it.
-    ConvertLast,
+    /// A hotkey from the settings.
+    Action(Action),
 }
 
 /// What the platform must do, in this order.
@@ -26,6 +28,10 @@ pub enum Command {
         text: String,
     },
     SwitchLayout(LayoutId),
+    /// Retype the selected text in the next layout ([`crate::convert_text`]).
+    ConvertSelection,
+    /// Give the selected text the next case ([`crate::cycle_case`]).
+    ChangeCase,
 }
 
 /// The keyboard layouts, as the platform sees them.
@@ -36,6 +42,19 @@ pub trait Layouts {
     fn installed(&self) -> Vec<LayoutId>;
     /// What `strokes` type in `layout`; `None` when a key types nothing there (or a dead key).
     fn render(&self, layout: LayoutId, strokes: &[Stroke]) -> Option<String>;
+    /// The key and Shift/AltGr state that type `c` in `layout`; `None` when no key does.
+    fn stroke(&self, layout: LayoutId, c: char) -> Option<Stroke>;
+}
+
+/// The layout after `current` in the system's order (a layout not in the list counts as before
+/// the first); `None` with fewer than two layouts.
+pub fn next_layout(layouts: &dyn Layouts, current: LayoutId) -> Option<LayoutId> {
+    let installed = layouts.installed();
+    let next = installed
+        .iter()
+        .position(|&l| l == current)
+        .map_or(0, |i| (i + 1) % installed.len());
+    installed.get(next).copied().filter(|&l| l != current)
 }
 
 /// The last word typed, as keys, and the spaces typed after it.
@@ -73,9 +92,28 @@ impl Engine {
             }
             Input::Backspace => self.backspace(),
             Input::Break => self.clear(),
-            Input::ConvertLast => return self.convert(layouts),
+            Input::Action(action) => return self.action(action, layouts),
         }
         Vec::new()
+    }
+
+    fn action(&mut self, action: Action, layouts: &dyn Layouts) -> Vec<Command> {
+        if action == Action::ConvertLast {
+            return self.convert(layouts);
+        }
+        let current = self.shown_in.or_else(|| layouts.current());
+        // Every other action leaves the word behind.
+        self.clear();
+        match action {
+            Action::SwitchLayout => current
+                .and_then(|c| next_layout(layouts, c))
+                .map(Command::SwitchLayout)
+                .into_iter()
+                .collect(),
+            Action::ConvertSelection => vec![Command::ConvertSelection],
+            Action::ChangeCase => vec![Command::ChangeCase],
+            Action::ConvertLast | Action::ToggleEnabled => Vec::new(),
+        }
     }
 
     fn text(&mut self, stroke: Stroke) {
@@ -120,17 +158,11 @@ impl Engine {
         if self.word.is_empty() {
             return Vec::new();
         }
-        let installed = layouts.installed();
-        let Some(current) = self.shown_in.or_else(|| layouts.current()) else {
-            return Vec::new();
-        };
-        // The next layout after the current one; a current layout not in the list counts as
-        // before the first.
-        let next = installed
-            .iter()
-            .position(|&l| l == current)
-            .map_or(0, |i| (i + 1) % installed.len());
-        let Some(&target) = installed.get(next).filter(|&&l| l != current) else {
+        let Some(target) = self
+            .shown_in
+            .or_else(|| layouts.current())
+            .and_then(|c| next_layout(layouts, c))
+        else {
             return Vec::new();
         };
         let Some(word) = layouts.render(target, &self.word) else {
@@ -150,60 +182,7 @@ impl Engine {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::cell::Cell;
-
-    const EN: LayoutId = LayoutId(0x0409_0409);
-    const RU: LayoutId = LayoutId(0x0419_0419);
-
-    /// The keys of `ghbdtn` / `привет` and a few others, in US and Russian.
-    const KEYS: &[(u16, char, char)] = &[
-        (0x22, 'g', 'п'),
-        (0x23, 'h', 'р'),
-        (0x30, 'b', 'и'),
-        (0x20, 'd', 'в'),
-        (0x14, 't', 'е'),
-        (0x31, 'n', 'т'),
-        (0x1A, '[', 'х'),
-    ];
-
-    struct Fake {
-        current: Cell<LayoutId>,
-        installed: Vec<LayoutId>,
-    }
-
-    impl Fake {
-        fn new(current: LayoutId) -> Self {
-            Self {
-                current: Cell::new(current),
-                installed: vec![EN, RU],
-            }
-        }
-    }
-
-    impl Layouts for Fake {
-        fn current(&self) -> Option<LayoutId> {
-            Some(self.current.get())
-        }
-
-        fn installed(&self) -> Vec<LayoutId> {
-            self.installed.clone()
-        }
-
-        fn render(&self, layout: LayoutId, strokes: &[Stroke]) -> Option<String> {
-            strokes
-                .iter()
-                .map(|s| {
-                    let &(_, en, ru) = KEYS.iter().find(|k| k.0 == s.key.scan)?;
-                    let c = if layout == RU { ru } else { en };
-                    Some(if s.shift != s.caps {
-                        c.to_uppercase().next()?
-                    } else {
-                        c
-                    })
-                })
-                .collect()
-        }
-    }
+    use crate::fake::{EN, Fake, KEYS, RU};
 
     fn typed(engine: &mut Engine, layouts: &Fake, word: &str) {
         for c in word.chars() {
@@ -236,7 +215,7 @@ mod tests {
         let mut e = Engine::new();
         typed(&mut e, &fake, "ghbdtn");
         assert_eq!(
-            e.handle(Input::ConvertLast, &fake),
+            e.handle(Input::Action(Action::ConvertLast), &fake),
             [replace(6, "привет"), Command::SwitchLayout(RU)]
         );
     }
@@ -247,7 +226,7 @@ mod tests {
         let mut e = Engine::new();
         typed(&mut e, &fake, "Ghbdtn  ");
         assert_eq!(
-            e.handle(Input::ConvertLast, &fake)[0],
+            e.handle(Input::Action(Action::ConvertLast), &fake)[0],
             replace(8, "Привет  ")
         );
     }
@@ -257,10 +236,10 @@ mod tests {
         let fake = Fake::new(EN);
         let mut e = Engine::new();
         typed(&mut e, &fake, "ghbdtn");
-        e.handle(Input::ConvertLast, &fake);
+        e.handle(Input::Action(Action::ConvertLast), &fake);
         // The window still reports EN.
         assert_eq!(
-            e.handle(Input::ConvertLast, &fake),
+            e.handle(Input::Action(Action::ConvertLast), &fake),
             [replace(6, "ghbdtn"), Command::SwitchLayout(EN)]
         );
     }
@@ -270,7 +249,10 @@ mod tests {
         let fake = Fake::new(RU);
         let mut e = Engine::new();
         typed(&mut e, &fake, "привет ghbdtn");
-        assert_eq!(e.handle(Input::ConvertLast, &fake)[0], replace(6, "ghbdtn"));
+        assert_eq!(
+            e.handle(Input::Action(Action::ConvertLast), &fake)[0],
+            replace(6, "ghbdtn")
+        );
     }
 
     #[test]
@@ -280,7 +262,10 @@ mod tests {
         typed(&mut e, &fake, "ghbdtnn ");
         e.handle(Input::Backspace, &fake);
         e.handle(Input::Backspace, &fake);
-        assert_eq!(e.handle(Input::ConvertLast, &fake)[0], replace(6, "привет"));
+        assert_eq!(
+            e.handle(Input::Action(Action::ConvertLast), &fake)[0],
+            replace(6, "привет")
+        );
     }
 
     #[test]
@@ -289,12 +274,18 @@ mod tests {
         let mut e = Engine::new();
         typed(&mut e, &fake, "ghbdtn");
         e.handle(Input::Break, &fake);
-        assert!(e.handle(Input::ConvertLast, &fake).is_empty());
+        assert!(
+            e.handle(Input::Action(Action::ConvertLast), &fake)
+                .is_empty()
+        );
 
         typed(&mut e, &fake, "g");
         e.handle(Input::Backspace, &fake);
         e.handle(Input::Backspace, &fake);
-        assert!(e.handle(Input::ConvertLast, &fake).is_empty());
+        assert!(
+            e.handle(Input::Action(Action::ConvertLast), &fake)
+                .is_empty()
+        );
     }
 
     #[test]
@@ -303,7 +294,10 @@ mod tests {
         fake.installed = vec![EN];
         let mut e = Engine::new();
         typed(&mut e, &fake, "ghbdtn");
-        assert!(e.handle(Input::ConvertLast, &fake).is_empty());
+        assert!(
+            e.handle(Input::Action(Action::ConvertLast), &fake)
+                .is_empty()
+        );
     }
 
     #[test]
@@ -311,8 +305,44 @@ mod tests {
         let fake = Fake::new(EN);
         let mut e = Engine::new();
         typed(&mut e, &fake, &"g".repeat(MAX_WORD + 1));
-        assert!(e.handle(Input::ConvertLast, &fake).is_empty());
+        assert!(
+            e.handle(Input::Action(Action::ConvertLast), &fake)
+                .is_empty()
+        );
         typed(&mut e, &fake, " ghbdtn");
-        assert_eq!(e.handle(Input::ConvertLast, &fake)[0], replace(6, "привет"));
+        assert_eq!(
+            e.handle(Input::Action(Action::ConvertLast), &fake)[0],
+            replace(6, "привет")
+        );
+    }
+}
+
+#[cfg(test)]
+mod action_tests {
+    use super::*;
+    use crate::fake::{EN, Fake, RU};
+
+    #[test]
+    fn switch_layout_goes_to_the_next_one() {
+        let fake = Fake::new(EN);
+        let mut e = Engine::new();
+        assert_eq!(
+            e.handle(Input::Action(Action::SwitchLayout), &fake),
+            [Command::SwitchLayout(RU)]
+        );
+    }
+
+    #[test]
+    fn selection_actions_reach_the_platform() {
+        let fake = Fake::new(EN);
+        let mut e = Engine::new();
+        assert_eq!(
+            e.handle(Input::Action(Action::ConvertSelection), &fake),
+            [Command::ConvertSelection]
+        );
+        assert_eq!(
+            e.handle(Input::Action(Action::ChangeCase), &fake),
+            [Command::ChangeCase]
+        );
     }
 }

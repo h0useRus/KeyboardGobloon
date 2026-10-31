@@ -6,3 +6,4 @@ license.workspace = true
 description = "Typing engine: the last word as physical keys, layout conversion (no OS code)"
 
 [dependencies]
+kbg-settings.workspace = true

@@ -3,9 +3,14 @@
 //! carry out. No OS code here: layouts come in through the [`Layouts`] trait.
 
 mod engine;
+#[cfg(test)]
+mod fake;
 mod keys;
+mod text;
 mod timings;
 
-pub use engine::{Command, Engine, Input, Layouts};
+pub use engine::{Command, Engine, Input, Layouts, next_layout};
+pub use kbg_settings::Action;
 pub use keys::{Key, LayoutId, Stroke};
+pub use text::{convert_text, cycle_case};
 pub use timings::Timings;
