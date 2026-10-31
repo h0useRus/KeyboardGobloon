@@ -30,8 +30,15 @@ next layout and switches the layout for you. Press it again to go back.
 It runs in the tray, uses about 2 MB of memory and no CPU while you're not typing, and never sends or
 stores what you type.
 
+- **Selected text:** Shift+Pause retypes the selection in the other layout, Alt+Pause cycles its case
+  (lower, UPPER, Title).
+- **Every hotkey is yours:** all actions, including switching the layout (Windows' own keys by
+  default, or any combination or a tap of Right Ctrl), are bound in Settings → Hotkeys.
+- **The language in the tray** as two letters, like the Windows switcher.
+
 ## Coming next
 
+- Flags in the tray as an alternative to the letters.
 - Automatic layout switching while you type, English and Russian first, more languages as downloads.
 - Automatic typo correction.
 - A local AI that turns a rough prompt into a better one for Claude, ChatGPT or Gemini.

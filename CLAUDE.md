@@ -21,9 +21,17 @@ Plans (local only, gitignored): plans/ROADMAP.md (milestones M0a-M6). Work on ON
   inject.rs = SendInput (Backspaces + KEYEVENTF_UNICODE, dwExtraInfo "KBG0"); layouts.rs = HKLs, ToUnicodeEx with
   flag 4 (keeps dead-key state), WM_INPUTLANGCHANGEREQUEST to the foreground window; tray.rs = hidden window +
   Shell_NotifyIcon on the main thread (re-added on TaskbarCreated); instance.rs = named mutex
-- crates/keyboard-gobloon  background exe -> KeyboardGobloon.exe: main thread = tray loop, `kbg-engine` thread runs
-  the engine on the hook's channel; logfile.rs; build.rs embeds version + Windows resources (icon if
-  assets/icon/KeyboardGobloon.ico exists)
+- crates/kbg-settings  settings.gob model (TOML, broken values fall back to defaults), `Hotkey` (modifiers + VK, written
+  `Shift+Pause`; a lone modifier like `RCtrl` is a tap), `Action` (every hotkey action), `data_dir`
+- crates/keyboard-gobloon  background exe -> KeyboardGobloon.exe: main thread = tray loop (tray.rs: language icon drawn
+  by icon.rs, one-shot timer after key-ups/clicks/foreground changes, no idle timer), `kbg-engine` thread runs the
+  engine; selection actions go through selection.rs (Ctrl+C, type the result, restore the clipboard text);
+  logfile.rs; build.rs embeds version + Windows resources
+- crates/keyboard-gobloon-settings  settings window -> KeyboardGobloonSettings.exe (eframe with the glow renderer:
+  wgpu took ~400 MB; egui + gob-ui, Joystick Gobloon's look): General (autostart, theme buttons, language), Hotkeys
+  (record via held_keys polling; the app's hotkeys rest while recording), About. Saves on every change and posts
+  `KeyboardGobloon.reload` to the app's hidden window (class `KeyboardGobloon.tray`). Debug builds open a tab from
+  env `KEYBOARD_GOBLOON_TAB` = general | hotkeys | about (for screenshots)
 
 ## Rules
 - **No AI attribution, ever** (the user's top rule): no "Co-Authored-By: Claude", no "Generated with Claude Code",
@@ -33,6 +41,8 @@ Plans (local only, gitignored): plans/ROADMAP.md (milestones M0a-M6). Work on ON
   idle. No polling or timers, no allocation in hook procedures, no UI framework in KeyboardGobloon.exe: the
   settings (egui + gob-ui) and the AI run as separate processes started on demand. Measure after changes to the
   hot path (Get-Process PrivateMemorySize64 / CPU of a release build).
+- **Every hotkey is bindable in Settings** (user rule): a new action gets an `Action` variant, a `Hotkeys` field,
+  a default (or none) and a row on the Hotkeys tab. No hardcoded keys in the hook.
 - **Privacy**: typed text is never logged, stored or sent. Log counts and events, never characters.
 - Platform code (OS APIs) lives only in kbg-platform; kbg-core and the app never use `windows::`/`cfg(windows)`.
 - UI (when the settings app comes): the same rules as Joystick Gobloon - icons first (egui-phosphor), gob-ui widgets
