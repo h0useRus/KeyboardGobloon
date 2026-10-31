@@ -2,14 +2,16 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod logfile;
+mod packs;
 
 use std::cell::RefCell;
 use std::path::Path;
 use std::rc::Rc;
+use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::mpsc::{Receiver, sync_channel};
 
 use gob_i18n::I18n;
-use kbg_core::{Command, Engine, Input};
+use kbg_core::{Command, Engine, Input, Layouts};
 use kbg_platform::{SystemLayouts, TrayEvent, TrayMenu};
 use kbg_settings::{Hotkeys, Settings};
 
@@ -27,6 +29,20 @@ const SETTINGS_EXE: &str = "KeyboardGobloonSettings.exe";
 
 /// Room for bursts of keys while the engine thread is busy typing a conversion.
 const INPUT_QUEUE: usize = 256;
+
+/// Bumped when the engine thread must load the language packs again (start, settings saved);
+/// 0 = auto-switching off.
+static DETECTOR: AtomicU32 = AtomicU32::new(0);
+
+fn want_detector(on: bool) {
+    static NEXT: AtomicU32 = AtomicU32::new(1);
+    let wanted = if on {
+        NEXT.fetch_add(1, Ordering::Relaxed)
+    } else {
+        0
+    };
+    DETECTOR.store(wanted, Ordering::Relaxed);
+}
 
 /// Folder of settings and the log (a portable copy keeps them next to the exe).
 pub fn data_dir() -> Option<&'static Path> {
@@ -81,7 +97,16 @@ fn open_settings() {
 fn run_engine(rx: Receiver<Input>) {
     let layouts = SystemLayouts;
     let mut engine = Engine::new();
+    let mut loaded = 0;
     for input in rx {
+        let wanted = DETECTOR.load(Ordering::Relaxed);
+        if wanted != loaded {
+            loaded = wanted;
+            let detector = (wanted != 0)
+                .then(|| packs::detector(&layouts.installed()))
+                .flatten();
+            engine.set_detector(detector);
+        }
         for command in engine.handle(input, &layouts) {
             match command {
                 Command::Replace { erase, text } => kbg_platform::replace(erase, &text),
@@ -115,6 +140,7 @@ fn main() {
     logfile::init();
     let settings = load_settings();
     kbg_platform::set_hotkeys(&settings.hotkeys);
+    want_detector(settings.auto_switch);
     let menu = tray_menu(&i18n(&settings));
     let (tx, rx) = sync_channel(INPUT_QUEUE);
     let Some(hook) = kbg_platform::start_input(tx) else {
@@ -130,6 +156,8 @@ fn main() {
         TrayEvent::Reload => {
             let new = load_settings();
             kbg_platform::set_hotkeys(&new.hotkeys);
+            // Also picks up layouts added in Windows since.
+            want_detector(new.auto_switch);
             kbg_platform::set_tray_menu(tray_menu(&i18n(&new)));
             log::info!("settings reloaded");
             *settings.borrow_mut() = new;

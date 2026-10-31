@@ -22,7 +22,8 @@ Plans (local only, gitignored): plans/ROADMAP.md (milestones M0a-M6). Work on ON
   Watchdog: a 30 s thread timer compares GetLastInputInfo with the hooks' last event time and installs them again
   when silent (Windows drops slow LL hooks). Keyboard-proc timings (`kbg_core::Timings`) go to the log on tray Exit.
   inject.rs = SendInput (Backspaces + KEYEVENTF_UNICODE, dwExtraInfo "KBG0"); layouts.rs = HKLs, ToUnicodeEx with
-  flag 4 (keeps dead-key state), WM_INPUTLANGCHANGEREQUEST to the foreground window; tray.rs = hidden window +
+  flag 4 (keeps dead-key state), WM_INPUTLANGCHANGEREQUEST to the foreground window, `layout_serves` (HKL vs a
+  pack's KLIDs by main language); mapped.rs = read-only file mappings for packs (not private memory); tray.rs = hidden window +
   Shell_NotifyIcon on the main thread (re-added on TaskbarCreated); instance.rs = named mutex
 - crates/kbg-settings  settings.gob model (TOML, broken values fall back to defaults), `Hotkey` (modifiers + VK, written
   `Shift+Pause`; a lone modifier like `RCtrl` is a tap), `Action` (every hotkey action), `data_dir`
@@ -36,7 +37,9 @@ Plans (local only, gitignored): plans/ROADMAP.md (milestones M0a-M6). Work on ON
   `cargo test --release -p kbg-core real_packs -- --ignored --nocapture`
 - crates/keyboard-gobloon  background exe -> KeyboardGobloon.exe: main thread = tray loop (tray.rs: language icon drawn
   by icon.rs, one-shot timer after key-ups/clicks/foreground changes, no idle timer), `kbg-engine` thread runs the
-  engine; selection actions go through selection.rs (Ctrl+C, type the result, restore the clipboard text);
+  engine; packs.rs loads `packs\<code>\` from the data folder and next to the exe (newer version wins) into a
+  `Detector` on the engine thread, again after every settings save (`auto_switch` off = none);
+  selection actions go through selection.rs (Ctrl+C, type the result, restore the clipboard text);
   logfile.rs; build.rs embeds version + Windows resources
 - crates/keyboard-gobloon-settings  settings window -> KeyboardGobloonSettings.exe (eframe with the glow renderer:
   wgpu took ~400 MB; egui + gob-ui, Joystick Gobloon's look): General (autostart, theme buttons, language), Hotkeys
