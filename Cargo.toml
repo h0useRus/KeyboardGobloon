@@ -15,6 +15,13 @@ kbg-platform = { path = "crates/kbg-platform" }
 gob-i18n = { git = "https://github.com/h0useRus/gobloon-common-ui", tag = "v0.1.0" }
 windows = "0.62"
 log = { version = "0.4", features = ["std"] }
+serde = { version = "1", features = ["derive"] }
+toml = "1"
+# The OpenGL renderer: wgpu reserves hundreds of MB, the settings window stays small with glow.
+eframe = { version = "0.37", default-features = false, features = ["accesskit", "default_fonts", "glow", "links"] }
+egui = "0.37"
+kbg-settings = { path = "crates/kbg-settings" }
+gob-ui = { git = "https://github.com/h0useRus/gobloon-common-ui", tag = "v0.1.0" }
 
 [profile.release]
 lto = true

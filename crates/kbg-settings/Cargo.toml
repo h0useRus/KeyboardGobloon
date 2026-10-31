@@ -1,0 +1,10 @@
+[package]
+name = "kbg-settings"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Keyboard Gobloon's settings (settings.gob) and hotkeys, shared by the app and the settings window"
+
+[dependencies]
+serde.workspace = true
+toml.workspace = true
