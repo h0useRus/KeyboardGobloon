@@ -1,0 +1,18 @@
+[package]
+name = "keyboard-gobloon"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "KeyboardGobloon"
+path = "src/main.rs"
+
+[dependencies]
+kbg-core.workspace = true
+kbg-platform.workspace = true
+gob-i18n.workspace = true
+log.workspace = true
+
+[build-dependencies]
+winresource = "0.1"
