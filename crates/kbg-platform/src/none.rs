@@ -47,6 +47,14 @@ pub fn language_letters(_layout: LayoutId) -> String {
     "??".into()
 }
 
+pub fn layout_serves(_layout: LayoutId, _klids: &[String]) -> bool {
+    false
+}
+
+pub fn map_file(path: &Path) -> std::io::Result<kbg_core::Bytes> {
+    std::fs::read(path).map(kbg_core::Bytes::new)
+}
+
 pub fn replace(_erase: usize, _text: &str) {}
 
 pub fn switch_layout(_layout: LayoutId) {}

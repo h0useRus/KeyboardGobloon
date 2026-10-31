@@ -3,6 +3,7 @@ mod icon;
 mod inject;
 mod instance;
 mod layouts;
+mod mapped;
 mod selection;
 mod system;
 mod tray;
@@ -15,7 +16,8 @@ use windows::Win32::System::SystemInformation::GetLocalTime;
 pub use hook::{InputHook, enabled, set_enabled, set_hotkeys, start as start_input};
 pub use inject::replace;
 pub use instance::claim as claim_instance;
-pub use layouts::{SystemLayouts, language_letters, switch as switch_layout};
+pub use layouts::{SystemLayouts, language_letters, layout_serves, switch as switch_layout};
+pub use mapped::map_file;
 pub use selection::transform as transform_selection;
 pub use system::{
     allow_foreground, autostart, focus_window, held_keys, set_autostart, system_switch_keys,

@@ -131,6 +131,17 @@ pub fn language_letters(layout: LayoutId) -> String {
     code.chars().take(2).collect::<String>().to_uppercase()
 }
 
+/// Whether `layout` types the language of one of `klids` (keyboard layout ids like `00000419`).
+/// Only the main language counts, so English (Australia) uses a pack made for US layouts.
+pub fn layout_serves(layout: LayoutId, klids: &[String]) -> bool {
+    // The low word of an HKL and of a KLID is a language id; its low 10 bits the main language.
+    let primary = |lang: usize| lang & 0x3FF;
+    klids
+        .iter()
+        .filter_map(|k| usize::from_str_radix(k, 16).ok())
+        .any(|k| primary(k & 0xFFFF) == primary(layout.0 & 0xFFFF))
+}
+
 /// Asks the foreground window to switch to `layout`, as the system switcher does.
 pub fn switch(layout: LayoutId) {
     // SAFETY: posting a message to a window handle; a stale handle only fails the post.
@@ -149,5 +160,22 @@ pub fn switch(layout: LayoutId) {
         {
             log::warn!("layout switch request could not be posted");
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn layouts_match_packs_by_main_language() {
+        let ru = ["00000419".to_string(), "00010419".to_string()];
+        let en = ["00000409".to_string()];
+        assert!(layout_serves(LayoutId(0x0419_0419), &ru));
+        // English (Australia) with the US layout; Dvorak (a layout id in the high word).
+        assert!(layout_serves(LayoutId(0x0409_0C09), &en));
+        assert!(layout_serves(LayoutId(0xF002_0409), &en));
+        assert!(!layout_serves(LayoutId(0x0409_0409), &ru));
+        assert!(!layout_serves(LayoutId(0x0409_0409), &["junk".to_string()]));
     }
 }
