@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="28 36 200 200">
+<!-- Tray: the green keycap (no face, no ears) with the language as two letters (RU). -->
+<g stroke="#fff" stroke-width="10" stroke-linejoin="round" fill="#fff"><rect x="36" y="44" width="184" height="184" rx="40"/></g>
+<rect x="36" y="44" width="184" height="184" rx="40" fill="#6f9a1c"/>
+<rect x="48" y="48" width="160" height="156" rx="30" fill="#9acd32"/><text x="128" y="160.0" text-anchor="middle" font-family="Segoe UI, sans-serif" font-weight="800" font-size="104" letter-spacing="-4" fill="#1d2b05">RU</text>
+</svg>
