@@ -4,6 +4,8 @@
 
 mod engine;
 mod keys;
+mod timings;
 
 pub use engine::{Command, Engine, Input, Layouts};
 pub use keys::{Key, LayoutId, Stroke};
+pub use timings::Timings;
