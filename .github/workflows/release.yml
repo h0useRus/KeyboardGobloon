@@ -66,7 +66,7 @@ jobs:
       - name: Build
         env:
           KEYBOARD_GOBLOON_VERSION: ${{ steps.version.outputs.version }}
-        run: cargo build --release -p keyboard-gobloon
+        run: cargo build --release -p keyboard-gobloon -p keyboard-gobloon-settings
 
       - name: Upload the app for signing
         if: env.SIGN == 'true'
@@ -74,7 +74,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: unsigned-exe
-          path: target/release/KeyboardGobloon.exe
+          path: |
+            target/release/KeyboardGobloon.exe
+            target/release/KeyboardGobloonSettings.exe
           if-no-files-found: error
 
       - name: Sign the app
@@ -90,11 +92,11 @@ jobs:
           wait-for-completion: true
           output-artifact-directory: target/signed-exe
 
-      # The installer and the portable zip take the signed exe.
+      # The installer and the portable zip take the signed exes.
       - name: Use the signed app
         if: env.SIGN == 'true'
         shell: pwsh
-        run: Copy-Item target\signed-exe\KeyboardGobloon.exe target\release\KeyboardGobloon.exe -Force
+        run: Copy-Item target\signed-exe\*.exe target\release\ -Force
 
       - name: Installer
         shell: pwsh
@@ -138,7 +140,7 @@ jobs:
         run: |
           $dir = "target\portable\KeyboardGobloon"
           New-Item -ItemType Directory -Force "$dir\lang" | Out-Null
-          Copy-Item target\release\KeyboardGobloon.exe $dir
+          Copy-Item target\release\KeyboardGobloon.exe, target\release\KeyboardGobloonSettings.exe $dir
           Copy-Item lang\*.ftl "$dir\lang"
           Copy-Item LICENSE $dir
           Compress-Archive -Path $dir -DestinationPath "target\installer\KeyboardGobloon-${{ steps.version.outputs.version }}-portable.zip" -Force

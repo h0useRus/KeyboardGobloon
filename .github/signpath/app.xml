@@ -1,8 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- SignPath artifact configuration "app": the GitHub artifact (a zip) holds KeyboardGobloon.exe. -->
+<!-- SignPath artifact configuration "app": the GitHub artifact (a zip) holds KeyboardGobloon.exe
+     and KeyboardGobloonSettings.exe. -->
 <artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
   <zip-file>
     <pe-file path="KeyboardGobloon.exe">
+      <authenticode-sign />
+    </pe-file>
+    <pe-file path="KeyboardGobloonSettings.exe">
       <authenticode-sign />
     </pe-file>
   </zip-file>

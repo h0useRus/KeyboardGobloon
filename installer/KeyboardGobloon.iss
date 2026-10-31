@@ -55,6 +55,8 @@ Name: "desktopicon"; Description: "{cm:DesktopIcon}"; Flags: unchecked
 
 [Files]
 Source: "..\target\release\{#AppExe}"; DestDir: "{app}"; Flags: ignoreversion
+; The settings window (opened from the tray).
+Source: "..\target\release\KeyboardGobloonSettings.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\lang\*.ftl"; DestDir: "{app}\lang"; Flags: ignoreversion
 Source: "..\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 
