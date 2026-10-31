@@ -1,0 +1,14 @@
+[package]
+name = "kbg-pack-builder"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Builds Keyboard Gobloon's language packs (word forms + letter model) and their catalog"
+
+[dependencies]
+fst = "0.4"
+serde.workspace = true
+serde_json = "1"
+sha2 = "0.11"
+toml.workspace = true
+zip = { version = "9", default-features = false, features = ["deflate"] }

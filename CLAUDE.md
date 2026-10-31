@@ -23,6 +23,9 @@ Plans (local only, gitignored): plans/ROADMAP.md (milestones M0a-M6). Work on ON
   Shell_NotifyIcon on the main thread (re-added on TaskbarCreated); instance.rs = named mutex
 - crates/kbg-settings  settings.gob model (TOML, broken values fall back to defaults), `Hotkey` (modifiers + VK, written
   `Shift+Pause`; a lone modifier like `RCtrl` is a tap), `Action` (every hotkey action), `data_dir`
+- crates/kbg-pack-builder  CLI + lib, not shipped: a source folder (`source.toml`: code, KLIDs, license, alphabet, word
+  lists of `word [count]`) -> `<code>-<version>.zip` with pack.toml, words.fst (word -> Zipf x 10, 0 = no count) and
+  trigrams.bin (letter-trigram costs, format in trigrams.rs), plus packs.json (size, SHA-256, URL). Deterministic zips
 - crates/keyboard-gobloon  background exe -> KeyboardGobloon.exe: main thread = tray loop (tray.rs: language icon drawn
   by icon.rs, one-shot timer after key-ups/clicks/foreground changes, no idle timer), `kbg-engine` thread runs the
   engine; selection actions go through selection.rs (Ctrl+C, type the result, restore the clipboard text);
