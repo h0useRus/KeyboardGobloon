@@ -4,25 +4,37 @@
 //! through a bounded channel: Windows drops a hook that is slow to return. Keys still reach
 //! the other programs, except the hotkeys we act on. Injected events (ours and anyone's) are
 //! ignored, so what we type never comes back as input.
+//!
+//! Windows also removes a hook silently when it is slow once too often. A watchdog on the hook
+//! thread compares the system's last input time with the last event the hooks saw and installs
+//! them again when they fell silent.
 
 use std::cell::RefCell;
 use std::sync::mpsc::{self, SyncSender};
 use std::thread::JoinHandle;
+use std::time::Instant;
 
-use kbg_core::{Input, Key, Stroke};
-use windows::Win32::Foundation::{LPARAM, LRESULT, WPARAM};
+use kbg_core::{Input, Key, Stroke, Timings};
+use windows::Win32::Foundation::{HINSTANCE, LPARAM, LRESULT, WPARAM};
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows::Win32::System::Threading::GetCurrentThreadId;
 use windows::Win32::UI::Input::KeyboardAndMouse::{
-    GetKeyState, VIRTUAL_KEY, VK_BACK, VK_CAPITAL, VK_LCONTROL, VK_LMENU, VK_LSHIFT, VK_LWIN,
-    VK_NUMLOCK, VK_PAUSE, VK_RCONTROL, VK_RMENU, VK_RSHIFT, VK_RWIN, VK_SCROLL, VK_SPACE,
+    GetKeyState, GetLastInputInfo, LASTINPUTINFO, VIRTUAL_KEY, VK_BACK, VK_CAPITAL, VK_LCONTROL,
+    VK_LMENU, VK_LSHIFT, VK_LWIN, VK_NUMLOCK, VK_PAUSE, VK_RCONTROL, VK_RMENU, VK_RSHIFT, VK_RWIN,
+    VK_SCROLL, VK_SPACE,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
-    CallNextHookEx, DispatchMessageW, GetForegroundWindow, GetMessageW, HC_ACTION, KBDLLHOOKSTRUCT,
-    LLKHF_EXTENDED, LLKHF_INJECTED, MSG, PostThreadMessageW, SetWindowsHookExW, TranslateMessage,
-    UnhookWindowsHookEx, WH_KEYBOARD_LL, WH_MOUSE_LL, WM_KEYDOWN, WM_LBUTTONDOWN, WM_MBUTTONDOWN,
-    WM_QUIT, WM_RBUTTONDOWN, WM_SYSKEYDOWN, WM_XBUTTONDOWN,
+    CallNextHookEx, DispatchMessageW, GetForegroundWindow, GetMessageW, HC_ACTION, HHOOK,
+    KBDLLHOOKSTRUCT, KillTimer, LLKHF_EXTENDED, LLKHF_INJECTED, MSG, MSLLHOOKSTRUCT,
+    PostThreadMessageW, SetTimer, SetWindowsHookExW, TranslateMessage, UnhookWindowsHookEx,
+    WH_KEYBOARD_LL, WH_MOUSE_LL, WM_KEYDOWN, WM_LBUTTONDOWN, WM_MBUTTONDOWN, WM_QUIT,
+    WM_RBUTTONDOWN, WM_SYSKEYDOWN, WM_TIMER, WM_XBUTTONDOWN,
 };
+
+/// How often the watchdog looks: one wake-up per 30 s costs nothing measurable.
+const WATCHDOG_MS: u32 = 30_000;
+/// Input the hooks did not see for this long means they were removed.
+const SILENT_MS: u32 = 2_000;
 
 const SHIFT_L: u8 = 1;
 const SHIFT_R: u8 = 2;
@@ -46,6 +58,10 @@ struct State {
     /// A hotkey whose press we kept from the other programs: its release is kept too.
     swallowed: Option<VIRTUAL_KEY>,
     foreground: usize,
+    /// Time stamp of the last event either hook saw, injected ones included (tick count).
+    last_seen: u32,
+    /// How long the keyboard procedure takes for real keys; logged when the hooks stop.
+    timings: Timings,
 }
 
 thread_local! {
@@ -152,12 +168,20 @@ unsafe extern "system" fn keyboard(code: i32, wparam: WPARAM, lparam: LPARAM) ->
     if code == HC_ACTION as i32 {
         // SAFETY: for WH_KEYBOARD_LL with HC_ACTION, lparam points to a KBDLLHOOKSTRUCT.
         let info = unsafe { &*(lparam.0 as *const KBDLLHOOKSTRUCT) };
-        if info.flags.0 & LLKHF_INJECTED.0 == 0 {
-            let down = matches!(wparam.0 as u32, WM_KEYDOWN | WM_SYSKEYDOWN);
-            let swallow = STATE.with_borrow_mut(|s| s.as_mut().is_some_and(|s| s.key(info, down)));
-            if swallow {
-                return LRESULT(1);
+        let start = Instant::now();
+        let swallow = STATE.with_borrow_mut(|s| {
+            let Some(s) = s.as_mut() else { return false };
+            s.last_seen = info.time;
+            if info.flags.0 & LLKHF_INJECTED.0 != 0 {
+                return false;
             }
+            let down = matches!(wparam.0 as u32, WM_KEYDOWN | WM_SYSKEYDOWN);
+            let swallow = s.key(info, down);
+            s.timings.record(start.elapsed().as_nanos() as u64);
+            swallow
+        });
+        if swallow {
+            return LRESULT(1);
         }
     }
     // SAFETY: passing the event on is always allowed.
@@ -165,16 +189,20 @@ unsafe extern "system" fn keyboard(code: i32, wparam: WPARAM, lparam: LPARAM) ->
 }
 
 unsafe extern "system" fn mouse(code: i32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
-    // A click may move the caret. Moves and the wheel return at once.
-    if code == HC_ACTION as i32
-        && matches!(
+    if code == HC_ACTION as i32 {
+        // SAFETY: for WH_MOUSE_LL with HC_ACTION, lparam points to an MSLLHOOKSTRUCT.
+        let info = unsafe { &*(lparam.0 as *const MSLLHOOKSTRUCT) };
+        // A click may move the caret. Moves and the wheel only update the time stamp.
+        let click = matches!(
             wparam.0 as u32,
             WM_LBUTTONDOWN | WM_RBUTTONDOWN | WM_MBUTTONDOWN | WM_XBUTTONDOWN
-        )
-    {
-        STATE.with_borrow(|s| {
+        );
+        STATE.with_borrow_mut(|s| {
             if let Some(s) = s {
-                s.send(Input::Break);
+                s.last_seen = info.time;
+                if click {
+                    s.send(Input::Break);
+                }
             }
         });
     }
@@ -186,6 +214,64 @@ unsafe extern "system" fn mouse(code: i32, wparam: WPARAM, lparam: LPARAM) -> LR
 pub struct InputHook {
     thread: Option<JoinHandle<()>>,
     thread_id: u32,
+}
+
+/// Both hooks, installed on the calling thread.
+struct Hooks {
+    keyboard: HHOOK,
+    mouse: Option<HHOOK>,
+}
+
+impl Hooks {
+    fn install(module: Option<HINSTANCE>) -> Option<Self> {
+        // SAFETY: the procedures are valid for the life of the process; the thread that
+        // installs them runs a message loop.
+        unsafe {
+            let Ok(keyboard) = SetWindowsHookExW(WH_KEYBOARD_LL, Some(keyboard), module, 0) else {
+                log::error!("keyboard hook could not be installed");
+                return None;
+            };
+            let mouse = SetWindowsHookExW(WH_MOUSE_LL, Some(mouse), module, 0).ok();
+            if mouse.is_none() {
+                log::warn!("mouse hook could not be installed: clicks don't end the word");
+            }
+            Some(Self { keyboard, mouse })
+        }
+    }
+}
+
+impl Drop for Hooks {
+    fn drop(&mut self) {
+        // SAFETY: our own hooks, removed on the thread that installed them. Removing one that
+        // Windows already dropped only fails.
+        unsafe {
+            let _ = UnhookWindowsHookEx(self.keyboard);
+            if let Some(mouse) = self.mouse {
+                let _ = UnhookWindowsHookEx(mouse);
+            }
+        }
+    }
+}
+
+/// True when the system had input the hooks never saw.
+fn hooks_silent() -> bool {
+    let mut info = LASTINPUTINFO {
+        cbSize: size_of::<LASTINPUTINFO>() as u32,
+        dwTime: 0,
+    };
+    // SAFETY: the struct is initialized with its size.
+    if !unsafe { GetLastInputInfo(&mut info) }.as_bool() {
+        return false;
+    }
+    STATE.with_borrow_mut(|s| {
+        let Some(s) = s.as_mut() else { return false };
+        // Tick counts wrap after 49 days: compare the difference, not the values.
+        let silent = info.dwTime.wrapping_sub(s.last_seen) as i32 > SILENT_MS as i32;
+        if silent {
+            s.last_seen = info.dwTime;
+        }
+        silent
+    })
 }
 
 /// Installs the hooks on a new thread; `None` when Windows refuses the keyboard hook.
@@ -202,32 +288,51 @@ pub fn start(tx: SyncSender<Input>) -> Option<InputHook> {
                 caps,
                 swallowed: None,
                 foreground: 0,
+                last_seen: 0,
+                timings: Timings::default(),
             }));
-            // SAFETY: the hooks are installed and removed on this thread, which runs the
-            // message loop they need.
+            // SAFETY: plain module and thread queries.
+            let (module, thread_id) = unsafe {
+                (
+                    GetModuleHandleW(None).ok().map(Into::into),
+                    GetCurrentThreadId(),
+                )
+            };
+            let Some(mut hooks) = Hooks::install(module) else {
+                let _ = ready_tx.send(None);
+                return;
+            };
+            // The watchdog's first look starts from now.
+            let _ = hooks_silent();
+            let _ = ready_tx.send(Some(thread_id));
+            // SAFETY: the timer and the message loop belong to this thread.
             unsafe {
-                let module = GetModuleHandleW(None).ok().map(Into::into);
-                let keyboard = SetWindowsHookExW(WH_KEYBOARD_LL, Some(keyboard), module, 0);
-                let mouse = SetWindowsHookExW(WH_MOUSE_LL, Some(mouse), module, 0);
-                let Ok(keyboard) = keyboard else {
-                    log::error!("keyboard hook could not be installed");
-                    let _ = ready_tx.send(None);
-                    return;
-                };
-                if mouse.is_err() {
-                    log::warn!("mouse hook could not be installed: clicks don't end the word");
-                }
-                let _ = ready_tx.send(Some(GetCurrentThreadId()));
+                let timer = SetTimer(None, 0, WATCHDOG_MS, None);
                 let mut msg = MSG::default();
                 while GetMessageW(&mut msg, None, 0, 0).as_bool() {
+                    if msg.message == WM_TIMER && msg.hwnd.is_invalid() {
+                        if hooks_silent() {
+                            // Also after typing on the lock screen or a UAC prompt, which
+                            // no hook sees: installing again is harmless then.
+                            log::info!("hooks saw no input for a while: installing them again");
+                            drop(hooks);
+                            let Some(again) = Hooks::install(module) else {
+                                break;
+                            };
+                            hooks = again;
+                        }
+                        continue;
+                    }
                     let _ = TranslateMessage(&msg);
                     DispatchMessageW(&msg);
                 }
-                let _ = UnhookWindowsHookEx(keyboard);
-                if let Ok(mouse) = mouse {
-                    let _ = UnhookWindowsHookEx(mouse);
-                }
+                let _ = KillTimer(None, timer);
             }
+            STATE.with_borrow(|s| {
+                if let Some(s) = s {
+                    log::info!("keyboard hook: {}", s.timings.summary());
+                }
+            });
             // Drops the sender: the engine thread ends.
             STATE.set(None);
         })
