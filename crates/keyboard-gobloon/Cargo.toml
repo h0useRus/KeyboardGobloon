@@ -11,6 +11,7 @@ path = "src/main.rs"
 [dependencies]
 kbg-core.workspace = true
 kbg-platform.workspace = true
+kbg-settings.workspace = true
 gob-i18n.workspace = true
 log.workspace = true
 
