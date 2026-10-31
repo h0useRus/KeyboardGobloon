@@ -1,0 +1,191 @@
+# main: release v<version>, dev: pre-release v<version>-alpha.<run number>. The version comes
+# from the Conventional Commits since the last release (.github/scripts/next-version.sh).
+# Both build the app, the Windows installer and the portable zip after the same checks as CI.
+name: Release
+
+on:
+  push:
+    branches: [main, dev]
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+env:
+  # Like ci.yml: no debug info in the checks' builds (less to compile and cache).
+  CARGO_PROFILE_DEV_DEBUG: "0"
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # Windows: the app, the installer and the portable zip.
+  windows:
+    runs-on: windows-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
+    env:
+      # Code signing through SignPath: final releases only, and only when the secret is set;
+      # alpha builds and forks stay unsigned.
+      SIGN: ${{ github.ref_name == 'main' && secrets.SIGNPATH_API_TOKEN != '' }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      # Installs the Rust version pinned in rust-toolchain.toml.
+      - name: Rust toolchain
+        run: rustup toolchain install && rustup show
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Version
+        id: version
+        shell: bash
+        run: |
+          base=$(bash .github/scripts/next-version.sh)
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            version="$base"; prerelease=false
+          else
+            version="$base-alpha.${{ github.run_number }}"; prerelease=true
+          fi
+          if git rev-parse -q --verify "refs/tags/v$version" >/dev/null; then
+            echo "::error::Tag v$version already exists."
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
+          echo "Building $version"
+
+      - name: Check
+        run: |
+          cargo fmt --all --check
+          cargo clippy --workspace --all-targets -- -D warnings
+          cargo test --workspace
+
+      - name: Build
+        env:
+          KEYBOARD_GOBLOON_VERSION: ${{ steps.version.outputs.version }}
+        run: cargo build --release -p keyboard-gobloon
+
+      - name: Upload the app for signing
+        if: env.SIGN == 'true'
+        id: unsigned-exe
+        uses: actions/upload-artifact@v7
+        with:
+          name: unsigned-exe
+          path: target/release/KeyboardGobloon.exe
+          if-no-files-found: error
+
+      - name: Sign the app
+        if: env.SIGN == 'true'
+        uses: signpath/github-action-submit-signing-request@v2
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG || 'KeyboardGobloon' }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY || 'release-signing' }}
+          artifact-configuration-slug: app
+          github-artifact-id: ${{ steps.unsigned-exe.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: target/signed-exe
+
+      # The installer and the portable zip take the signed exe.
+      - name: Use the signed app
+        if: env.SIGN == 'true'
+        shell: pwsh
+        run: Copy-Item target\signed-exe\KeyboardGobloon.exe target\release\KeyboardGobloon.exe -Force
+
+      - name: Installer
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) {
+            choco install innosetup -y --no-progress
+          }
+          & $iscc "/DAppVersion=${{ steps.version.outputs.version }}" installer\KeyboardGobloon.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Upload the installer for signing
+        if: env.SIGN == 'true'
+        id: unsigned-setup
+        uses: actions/upload-artifact@v7
+        with:
+          name: unsigned-setup
+          path: target/installer/KeyboardGobloon-${{ steps.version.outputs.version }}-setup.exe
+          if-no-files-found: error
+
+      - name: Sign the installer
+        if: env.SIGN == 'true'
+        uses: signpath/github-action-submit-signing-request@v2
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG || 'KeyboardGobloon' }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY || 'release-signing' }}
+          artifact-configuration-slug: installer
+          github-artifact-id: ${{ steps.unsigned-setup.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: target/signed-setup
+
+      - name: Use the signed installer
+        if: env.SIGN == 'true'
+        shell: pwsh
+        run: Copy-Item target\signed-setup\*.exe target\installer\ -Force
+
+      - name: Portable zip
+        shell: pwsh
+        run: |
+          $dir = "target\portable\KeyboardGobloon"
+          New-Item -ItemType Directory -Force "$dir\lang" | Out-Null
+          Copy-Item target\release\KeyboardGobloon.exe $dir
+          Copy-Item lang\*.ftl "$dir\lang"
+          Copy-Item LICENSE $dir
+          Compress-Archive -Path $dir -DestinationPath "target\KeyboardGobloon-${{ steps.version.outputs.version }}-portable.zip" -Force
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: windows
+          path: |
+            target/installer/KeyboardGobloon-${{ steps.version.outputs.version }}-setup.exe
+            target/KeyboardGobloon-${{ steps.version.outputs.version }}-portable.zip
+          if-no-files-found: error
+
+  # The release with every file, once the build is done.
+  publish:
+    needs: [windows]
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.windows.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+      # Only this one: on main the unsigned installer kept for signing has the same name.
+      - uses: actions/download-artifact@v8
+        with:
+          name: windows
+          path: target/release-files
+
+      - name: Publish
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: v${{ env.VERSION }}
+          name: Keyboard Gobloon ${{ env.VERSION }}
+          target_commitish: ${{ github.sha }}
+          prerelease: ${{ needs.windows.outputs.prerelease }}
+          generate_release_notes: true
+          files: |
+            target/release-files/KeyboardGobloon-${{ env.VERSION }}-setup.exe
+            target/release-files/KeyboardGobloon-${{ env.VERSION }}-portable.zip
+
+      # Discord, the same channels as Joystick Gobloon: final releases to DISCORD_WEBHOOK, alpha
+      # builds to DISCORD_WEBHOOK_ALPHA (each only when that secret is set). A failed post never
+      # fails the release.
+      - name: Announce on Discord
+        continue-on-error: true
+        shell: pwsh
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          DISCORD_WEBHOOK_ALPHA: ${{ secrets.DISCORD_WEBHOOK_ALPHA }}
+        run: |
+          $pre = "${{ needs.windows.outputs.prerelease }}" -eq "true"
+          .github/scripts/discord-announce.ps1 -Version "${{ env.VERSION }}" -Repo "${{ github.repository }}" -Sha "${{ github.sha }}" -Prerelease:$pre

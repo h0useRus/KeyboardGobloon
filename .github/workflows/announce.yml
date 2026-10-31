@@ -1,0 +1,24 @@
+# Posts an existing release to Discord by hand (testing the webhook, or announcing again).
+name: Announce release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version without the v, e.g. 0.2.0 or 0.2.0-alpha.12"
+        required: true
+
+jobs:
+  announce:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Announce on Discord
+        shell: pwsh
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          DISCORD_WEBHOOK_ALPHA: ${{ secrets.DISCORD_WEBHOOK_ALPHA }}
+        run: |
+          $v = "${{ inputs.version }}"
+          $pre = $v.Contains("-")
+          .github/scripts/discord-announce.ps1 -Version $v -Repo "${{ github.repository }}" -Sha "${{ github.sha }}" -Prerelease:$pre

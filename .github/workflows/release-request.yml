@@ -1,0 +1,41 @@
+# Pull requests into main are release requests: they come from dev, and their title names the
+# version the merge releases (computed from the Conventional Commits since the last release).
+name: Release request
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, edited, reopened, synchronize]
+
+jobs:
+  validate:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: From dev
+        shell: bash
+        run: |
+          if [ "${{ github.head_ref }}" != "dev" ]; then
+            echo "::error::Pull requests into main must come from dev (this one is from ${{ github.head_ref }})."
+            exit 1
+          fi
+      # The version comes from the commits (.github/scripts/next-version.sh): they must all be
+      # Conventional Commits, and the title names the version the merge will release.
+      - name: Conventional commits
+        shell: bash
+        run: |
+          last=$(git tag -l 'v*' | { grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' || true; } | sort -V | tail -n1)
+          bash .github/scripts/next-version.sh --check "${last:+$last..}HEAD"
+      - name: Release version in the title
+        shell: bash
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          version=$(bash .github/scripts/next-version.sh)
+          echo "Release version: $version" >> "$GITHUB_STEP_SUMMARY"
+          if ! grep -qF "$version" <<< "$TITLE"; then
+            echo "::error::This merge releases $version: the pull request title must contain it (e.g. \"Release $version\")."
+            exit 1
+          fi
