@@ -1,0 +1,11 @@
+# English pack for kbg-pack-builder. words.txt comes from tools/pack-words.py.
+code = "en"
+name = "English"
+version = 1
+# US, UK, US-International, Dvorak, Irish
+layouts = ["00000409", "00000809", "00020409", "00010409", "00001809"]
+license = "CC-BY-SA-4.0"
+attribution = "Word forms: SCOWL by Kevin Atkinson (wordlist.aspell.net). Frequencies: wordfreq by Robyn Speer (CC BY-SA 4.0), including OpenSubtitles, SUBTLEX, Wikipedia, Google Books Ngrams."
+alphabet = "abcdefghijklmnopqrstuvwxyz'-"
+words = ["words.txt"]
+license_files = ["LICENSE.txt", "LICENSE-SCOWL.txt"]

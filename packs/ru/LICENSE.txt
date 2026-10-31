@@ -1,0 +1,17 @@
+Keyboard Gobloon Russian language pack
+
+The data in this pack (words.fst, trigrams.bin) is licensed under the Creative Commons
+Attribution-ShareAlike 4.0 International license: https://creativecommons.org/licenses/by-sa/4.0/
+It is separate from Keyboard Gobloon's code (MIT).
+
+Sources:
+- Word forms: the OpenCorpora dictionary, http://opencorpora.org/, licensed under CC BY-SA 3.0
+  (https://creativecommons.org/licenses/by-sa/3.0/), as packaged in pymorphy3-dicts-ru.
+- Word frequencies: wordfreq 3.1 by Robyn Speer, https://github.com/rspeer/wordfreq, data under
+  CC BY-SA 4.0. wordfreq contains data from OPUS OpenSubtitles 2018 (http://opus.nlpl.eu/,
+  originating from http://www.opensubtitles.org/), Wikipedia, ParaCrawl, the Leeds Internet
+  Corpus and Google Books Ngrams (http://books.google.com/ngrams).
+
+Changes: every word form was listed, forms with ё were also spelled with е, words were
+lowercased, filtered to the pack's alphabet, and turned into a frequency map and a
+letter-trigram model.

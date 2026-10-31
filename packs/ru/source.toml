@@ -1,0 +1,11 @@
+# Russian pack for kbg-pack-builder. words.txt comes from tools/pack-words.py.
+code = "ru"
+name = "Русский"
+version = 1
+# Russian, Russian (Typewriter), Russian - Mnemonic
+layouts = ["00000419", "00010419", "00020419"]
+license = "CC-BY-SA-4.0"
+attribution = "Word forms: OpenCorpora dictionary (opencorpora.org, CC BY-SA 3.0). Frequencies: wordfreq by Robyn Speer (CC BY-SA 4.0), including OpenSubtitles, Wikipedia, Google Books Ngrams."
+alphabet = "абвгдеёжзийклмнопрстуфхцчшщъыьэюя-"
+words = ["words.txt"]
+license_files = ["LICENSE.txt"]
