@@ -1,7 +1,8 @@
 //! Wrong-layout detection: the last word's keys are shown in every layout that has a language
 //! pack, and each rendering is scored by its pack (a dictionary word, or how familiar its letter
 //! runs are). The detector only answers when another layout clearly wins; a word it is unsure
-//! about stays as typed. The thresholds are first guesses until a test corpus tunes them.
+//! about stays as typed. The thresholds are tuned with `real_packs` below (2026-10-31, top 50 000
+//! words weighted by use: false switches 0.008% en / 0.003% ru, wrong layout caught 99.0% / 99.1%).
 
 use std::sync::Arc;
 
@@ -17,6 +18,12 @@ const MIN_LETTERS_UNKNOWN: usize = 4;
 const MARGIN: f32 = 2.5;
 /// ... and must look like a word at all.
 const MAX_COST: f32 = 6.0;
+/// When both renderings are dictionary words, the other one must be this much more common
+/// (Zipf x 10: 20 = a hundred times): `the` typed in Russian is `еру`, a rare word form.
+const FREQ_MARGIN: u64 = 20;
+/// A dictionary word at least this common (Zipf x 10) wins over a non-word however familiar its
+/// letters look: `тут` typed in English is `nen`.
+const FREQ_COMMON: u64 = 40;
 
 pub struct Detector {
     packs: Vec<(LayoutId, Arc<Pack>)>,
@@ -26,6 +33,8 @@ pub struct Detector {
 struct Score {
     /// A dictionary word.
     hit: bool,
+    /// Its frequency (Zipf x 10, 0 = rare or unknown).
+    freq: u64,
     /// Bits per letter; infinite when a letter is not in the alphabet.
     cost: f32,
     letters: usize,
@@ -51,9 +60,6 @@ impl Detector {
             return None;
         }
         let here = score(pack, &typed);
-        if here.hit {
-            return None;
-        }
         let mut best: Option<(LayoutId, Score)> = None;
         for (layout, pack) in self.packs.iter().filter(|(l, _)| *l != current) {
             let Some(text) = layouts.render(*layout, word) else {
@@ -62,15 +68,17 @@ impl Detector {
             let other = score(pack, &text);
             let better = match &best {
                 None => true,
-                Some((_, b)) => (other.hit, -other.cost) > (b.hit, -b.cost),
+                Some((_, b)) => (other.hit, other.freq, -other.cost) > (b.hit, b.freq, -b.cost),
             };
             if other.letters >= MIN_LETTERS && other.cost.is_finite() && better {
                 best = Some((*layout, other));
             }
         }
         let (layout, other) = best?;
-        let wins = if other.hit {
-            other.cost < here.cost
+        let wins = if here.hit {
+            other.hit && other.freq >= here.freq + FREQ_MARGIN
+        } else if other.hit {
+            other.cost < here.cost || other.freq >= FREQ_COMMON
         } else {
             other.letters >= MIN_LETTERS_UNKNOWN
                 && other.cost <= MAX_COST
@@ -86,8 +94,10 @@ fn score(pack: &Pack, text: &str) -> Score {
         .trim_matches(|c: char| !c.is_alphabetic())
         .to_lowercase();
     let cost = pack.letter_cost(&core).unwrap_or(f32::INFINITY);
+    let freq = pack.frequency(&core).filter(|_| cost.is_finite());
     Score {
-        hit: cost.is_finite() && pack.frequency(&core).is_some(),
+        hit: freq.is_some(),
+        freq: freq.unwrap_or(0),
         cost,
         letters: core.chars().count(),
     }
@@ -159,6 +169,69 @@ pub(crate) mod tests {
         assert_eq!(detect(EN, "lf"), None); // да
         assert_eq!(detect(EN, "ghbdtn2"), None);
         assert_eq!(detect(EN, "ghbDtn"), None);
+    }
+
+    /// The bundled packs on the most common words (wordfreq top 50 000 per language), weighted by
+    /// use: typed in the right layout (any switch is false), and in the other one (should switch
+    /// back). Needs `target/packs/<code>/` (kbg-pack-builder output, unzipped) and
+    /// `target/pack-data/eval-<code>.txt` (`word frequency` lines).
+    #[test]
+    #[ignore = "needs the built packs; cargo test -p kbg-core -- --ignored --nocapture"]
+    fn real_packs() {
+        use std::fs;
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../target");
+        let load = |code: &str| {
+            let dir = root.join("packs").join(code);
+            let pack = Pack::new(
+                &fs::read_to_string(dir.join("pack.toml")).unwrap(),
+                crate::Bytes::new(fs::read(dir.join("words.fst")).unwrap()),
+                crate::Bytes::new(fs::read(dir.join("trigrams.bin")).unwrap()),
+            );
+            Arc::new(pack.unwrap())
+        };
+        let detector = Detector::new(vec![(EN, load("en")), (RU, load("ru"))]);
+        let fake = Fake::new(EN);
+        for (code, here, there) in [("en", EN, RU), ("ru", RU, EN)] {
+            let list = fs::read_to_string(root.join(format!("pack-data/eval-{code}.txt"))).unwrap();
+            let (mut total, mut long, mut false_switch, mut caught) = (0.0, 0.0, 0.0, 0.0);
+            let (mut wrong, mut missed) = (Vec::new(), Vec::new());
+            for line in list.lines() {
+                let (word, f) = line.split_once(' ').unwrap();
+                let f: f64 = f.parse().unwrap();
+                let Some(keys) = word
+                    .chars()
+                    .map(|c| fake.stroke(here, c))
+                    .collect::<Option<Vec<_>>>()
+                else {
+                    continue;
+                };
+                total += f;
+                if detector.detect(&keys, here, &fake).is_some() {
+                    false_switch += f;
+                    wrong.push(word);
+                }
+                if keys.len() >= MIN_LETTERS {
+                    long += f;
+                    if detector.detect(&keys, there, &fake) == Some(here) {
+                        caught += f;
+                    } else {
+                        missed.push(word);
+                    }
+                }
+            }
+            println!(
+                "{code}: false switches {:.3}% ({} words, top: {:?})",
+                100.0 * false_switch / total,
+                wrong.len(),
+                &wrong[..wrong.len().min(25)]
+            );
+            println!(
+                "{code}: wrong layout caught {:.2}% of words with {MIN_LETTERS}+ letters ({} missed, top: {:?})",
+                100.0 * caught / long,
+                missed.len(),
+                &missed[..missed.len().min(25)]
+            );
+        }
     }
 
     #[test]

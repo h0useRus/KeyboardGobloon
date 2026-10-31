@@ -29,6 +29,11 @@ Plans (local only, gitignored): plans/ROADMAP.md (milestones M0a-M6). Work on ON
 - crates/kbg-pack-builder  CLI + lib, not shipped: a source folder (`source.toml`: code, KLIDs, license, alphabet, word
   lists of `word [count]`) -> `<code>-<version>.zip` with pack.toml, words.fst (word -> Zipf x 10, 0 = no count) and
   trigrams.bin (letter-trigram costs, format in trigrams.rs), plus packs.json (size, SHA-256, URL). Deterministic zips
+- packs/en, packs/ru  pack sources: source.toml (KLIDs, alphabet) + license notices (data CC BY-SA 4.0: SCOWL, OpenCorpora,
+  wordfreq). words.txt is generated and gitignored: `python tools/pack-words.py` (pip install wordfreq pymorphy3
+  pymorphy3-dicts-ru), then `cargo run -p kbg-pack-builder -- --out target/packs packs/en packs/ru`. Detector check on
+  real packs: unzip them to target/packs/<code>/, write target/pack-data/eval-<code>.txt (wordfreq top 50 000, `word freq`),
+  `cargo test --release -p kbg-core real_packs -- --ignored --nocapture`
 - crates/keyboard-gobloon  background exe -> KeyboardGobloon.exe: main thread = tray loop (tray.rs: language icon drawn
   by icon.rs, one-shot timer after key-ups/clicks/foreground changes, no idle timer), `kbg-engine` thread runs the
   engine; selection actions go through selection.rs (Ctrl+C, type the result, restore the clipboard text);
