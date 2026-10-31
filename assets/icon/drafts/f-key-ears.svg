@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+<!-- F: the ears are two blank keycaps with the F/J home-row bumps. -->
+<g stroke="#fff" stroke-width="14" stroke-linejoin="round" fill="#fff"><circle cx="128" cy="134" r="84"/><rect x="24" y="22" width="76" height="72" rx="14" transform="rotate(-16 62 58)"/><rect x="156" y="22" width="76" height="72" rx="14" transform="rotate(16 194 58)"/></g><g transform="rotate(-16 62 58)"><rect x="24" y="22" width="76" height="72" rx="16" fill="#2e3440"/><rect x="32" y="26" width="60" height="52" rx="11" fill="#4c566a"/><rect x="52.0" y="63.5" width="20.0" height="5.0" rx="2.5" fill="#8892a6"/></g><g transform="rotate(16 194 58)"><rect x="156" y="22" width="76" height="72" rx="16" fill="#2e3440"/><rect x="164" y="26" width="60" height="52" rx="11" fill="#4c566a"/><rect x="184.0" y="63.5" width="20.0" height="5.0" rx="2.5" fill="#8892a6"/></g><circle cx="128" cy="134" r="84" fill="#9acd32"/><g transform="translate(0 10)"><path d="M72 80l40 14" stroke="#3d5a0a" stroke-width="9" stroke-linecap="round"/>
+<ellipse cx="92" cy="110" rx="14" ry="10" fill="#fff"/><circle cx="94" cy="111" r="6" fill="#111"/>
+<path d="M146 92q16-10 32 0" stroke="#3d5a0a" stroke-width="7" fill="none" stroke-linecap="round"/><path d="M70 150q58 64 116 0q-58 34-116 0z" fill="#3a1606"/>
+<path d="M80 158l4-20 7 22z M176 158l-4-20-7 22z" fill="#fff"/></g>
+</svg>
