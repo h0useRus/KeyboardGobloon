@@ -68,6 +68,21 @@ jobs:
           KEYBOARD_GOBLOON_VERSION: ${{ steps.version.outputs.version }}
         run: cargo build --release -p keyboard-gobloon -p keyboard-gobloon-settings
 
+      # English and Russian ship with the app; the others download from Settings (packs.yml).
+      - name: Bundled language packs
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p target/release/packs
+          # A push that changes the packs starts packs.yml too: wait while it publishes them.
+          for i in $(seq 1 40); do
+            gh release download packs -p en.lng -p ru.lng -D target/release/packs --clobber && break
+            echo "Waiting for the packs release..."
+            sleep 30
+          done
+          test -f target/release/packs/en.lng && test -f target/release/packs/ru.lng
+
       - name: Upload the app for signing
         if: env.SIGN == 'true'
         id: unsigned-exe
@@ -139,9 +154,10 @@ jobs:
         shell: pwsh
         run: |
           $dir = "target\portable\KeyboardGobloon"
-          New-Item -ItemType Directory -Force "$dir\lang" | Out-Null
+          New-Item -ItemType Directory -Force "$dir\lang", "$dir\packs" | Out-Null
           Copy-Item target\release\KeyboardGobloon.exe, target\release\KeyboardGobloonSettings.exe $dir
           Copy-Item lang\*.ftl "$dir\lang"
+          Copy-Item target\release\packs\*.lng "$dir\packs"
           Copy-Item LICENSE $dir
           Compress-Archive -Path $dir -DestinationPath "target\installer\KeyboardGobloon-${{ steps.version.outputs.version }}-portable.zip" -Force
 

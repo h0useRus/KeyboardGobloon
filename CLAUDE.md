@@ -82,7 +82,9 @@ Plans (local only, gitignored): plans/ROADMAP.md (milestones M0a-M6). Work on ON
   since the latest final tag; feat -> minor, others -> patch, `type!:` -> major (minor while 0.x). Never bump by hand.
 - Releases (release.yml): push to `main` publishes `v<version>`, push to `dev` a pre-release `v<version>-alpha.<run>`;
   both ship the Inno Setup installer (installer/KeyboardGobloon.iss, per-user, no admin) and a portable zip.
-  SignPath signing on main when SIGNPATH_API_TOKEN is set. CI (ci.yml): commit messages, fmt, cargo-machete,
+  SignPath signing on main when SIGNPATH_API_TOKEN is set. The installer and zip bundle en.lng + ru.lng from the GitHub
+  release `packs`, which packs.yml rebuilds (all languages + packs.json, files replaced in place) when packs/, the pack
+  tools or kbg-pack-builder change; the settings window downloads the other languages from it. CI (ci.yml): commit messages, fmt, cargo-machete,
   clippy -D warnings, tests on work branches and PRs.
 - Discord: the same channels as Joystick Gobloon (secrets DISCORD_WEBHOOK, DISCORD_WEBHOOK_ALPHA hold the same
   webhook URLs); .github/scripts/discord-announce.ps1; announce.yml re-posts a release by hand.

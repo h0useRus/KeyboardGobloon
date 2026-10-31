@@ -1,0 +1,62 @@
+# Builds every language pack (<code>.lng) and the catalog packs.json, and publishes them as the
+# release `packs`: the settings window downloads from it, release.yml bundles en and ru from it.
+# Runs when the pack data or its tools change, or by hand. The files are replaced in place;
+# packs.json carries each pack's version, so raise `version` in packs/<code>/source.toml when
+# its data changes and the app offers the update.
+name: Packs
+
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - packs/**
+      - tools/pack-words.py
+      - tools/pack-requirements.txt
+      - crates/kbg-pack-builder/**
+  workflow_dispatch:
+
+concurrency:
+  group: packs
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  packs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: tools/pack-requirements.txt
+      - name: Word lists
+        run: |
+          pip install -r tools/pack-requirements.txt
+          python tools/pack-words.py
+
+      # Installs the Rust version pinned in rust-toolchain.toml.
+      - name: Rust toolchain
+        run: rustup toolchain install && rustup show
+      - uses: Swatinem/rust-cache@v2
+      - name: Packs
+        run: >
+          cargo run --release -p kbg-pack-builder --
+          --url "https://github.com/${{ github.repository }}/releases/download/packs"
+          --out target/packs packs/*/
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view packs >/dev/null 2>&1; then
+            gh release create packs --title "Language packs" --latest=false \
+              --target "${{ github.sha }}" \
+              --notes "Language packs for Keyboard Gobloon's auto layout switching. English and Russian come with the app; the others download from Settings. Each pack's data license is inside the .lng file."
+          fi
+          gh release upload packs target/packs/*.lng target/packs/packs.json --clobber

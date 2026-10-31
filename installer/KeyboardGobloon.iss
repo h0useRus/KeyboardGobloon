@@ -58,6 +58,8 @@ Source: "..\target\release\{#AppExe}"; DestDir: "{app}"; Flags: ignoreversion
 ; The settings window (opened from the tray).
 Source: "..\target\release\KeyboardGobloonSettings.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\lang\*.ftl"; DestDir: "{app}\lang"; Flags: ignoreversion
+; English and Russian language packs (release.yml downloads them from the `packs` release).
+Source: "..\target\release\packs\*.lng"; DestDir: "{app}\packs"; Flags: ignoreversion
 Source: "..\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
