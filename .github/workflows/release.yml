@@ -141,14 +141,16 @@ jobs:
           Copy-Item target\release\KeyboardGobloon.exe $dir
           Copy-Item lang\*.ftl "$dir\lang"
           Copy-Item LICENSE $dir
-          Compress-Archive -Path $dir -DestinationPath "target\KeyboardGobloon-${{ steps.version.outputs.version }}-portable.zip" -Force
+          Compress-Archive -Path $dir -DestinationPath "target\installer\KeyboardGobloon-${{ steps.version.outputs.version }}-portable.zip" -Force
 
+      # Both files from one folder: an artifact keeps paths below the files' common folder, and the
+      # publish job expects them side by side.
       - uses: actions/upload-artifact@v7
         with:
           name: windows
           path: |
             target/installer/KeyboardGobloon-${{ steps.version.outputs.version }}-setup.exe
-            target/KeyboardGobloon-${{ steps.version.outputs.version }}-portable.zip
+            target/installer/KeyboardGobloon-${{ steps.version.outputs.version }}-portable.zip
           if-no-files-found: error
 
   # The release with every file, once the build is done.
@@ -173,6 +175,8 @@ jobs:
           target_commitish: ${{ github.sha }}
           prerelease: ${{ needs.windows.outputs.prerelease }}
           generate_release_notes: true
+          # A missing file fails the release instead of publishing it without that file.
+          fail_on_unmatched_files: true
           files: |
             target/release-files/KeyboardGobloon-${{ env.VERSION }}-setup.exe
             target/release-files/KeyboardGobloon-${{ env.VERSION }}-portable.zip
