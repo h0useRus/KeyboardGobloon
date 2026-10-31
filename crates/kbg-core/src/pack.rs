@@ -42,6 +42,18 @@ pub struct Manifest {
     pub attribution: String,
 }
 
+impl Manifest {
+    /// `pack.toml`'s text; a pack made for a newer app is an error.
+    pub fn parse(text: &str) -> Result<Self, PackError> {
+        let manifest: Manifest =
+            toml::from_str(text).map_err(|e| PackError::Manifest(e.to_string()))?;
+        if manifest.format > FORMAT {
+            return Err(PackError::Format(manifest.format));
+        }
+        Ok(manifest)
+    }
+}
+
 #[derive(Debug)]
 pub enum PackError {
     Manifest(String),
@@ -77,11 +89,7 @@ pub struct Pack {
 
 impl Pack {
     pub fn new(manifest: &str, words: Bytes, trigrams: Bytes) -> Result<Self, PackError> {
-        let manifest: Manifest =
-            toml::from_str(manifest).map_err(|e| PackError::Manifest(e.to_string()))?;
-        if manifest.format > FORMAT {
-            return Err(PackError::Format(manifest.format));
-        }
+        let manifest = Manifest::parse(manifest)?;
         let words = fst::Map::new(words).map_err(|e| PackError::Words(e.to_string()))?;
         let (alphabet, costs) = trigram_header(trigrams.as_ref()).ok_or(PackError::Trigrams)?;
         let n = alphabet.len() + 1;
