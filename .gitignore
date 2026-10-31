@@ -1,0 +1,7 @@
+/target
+
+# local plans and roadmaps, not published
+/plans/
+
+# local [patch] to a gobloon-common-ui clone next to this repo (CLAUDE.md, Layout)
+/.cargo/
